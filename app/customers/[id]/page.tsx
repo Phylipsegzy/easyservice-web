@@ -253,6 +253,7 @@ export default function CustomerDetailPage() {
           </form>
         </div>
 
+        {myRole === "admin" && (
         <div>
           <h3 className="text-sm font-semibold mb-2">Add another wallet</h3>
           <form onSubmit={handleAddWallet} className="card flex flex-col gap-3">
@@ -272,6 +273,7 @@ export default function CustomerDetailPage() {
             </button>
           </form>
         </div>
+        )}
       </div>
 
       {error && <p className="text-red-600 text-sm mb-4">{error}</p>}

@@ -1,5 +1,27 @@
 "use client";
 
+const CHAD_OFFICES: Record<string, string[]> = {
+  Ndjamena: ["90850808", "68666611"],
+  Abeche: ["66230611", "99281685"],
+  Moundou: ["66241234", "99345678"],
+  Sarh: ["66251111", "99362222"],
+  Kelo: ["66263333"],
+  Koumra: ["66274444", "99385555"],
+  Pala: ["66285678"],
+  "Am Timan": ["66296789", "99407890"],
+  Mongo: ["66307891", "99418902"],
+  "Faya-Largeau": ["66318903"],
+  "Goz Beida": ["66329014", "99430125"],
+  "Al Aradip": ["66340126"],
+  Biltine: ["66351237", "99441238"],
+  Kalayit: ["66362348"],
+  Massaguet: ["66373459", "99452460"],
+  "Am Hadjar": ["66384560"],
+  Bitkine: ["66395671", "99463672"],
+  Abdi: ["66406782"],
+  Arada: ["66417893", "99474894"],
+};
+
 export default function TransactionReceiptCard({ transaction }: { transaction: any }) {
   const completed = transaction.payment_status === "completed";
 
@@ -52,6 +74,24 @@ export default function TransactionReceiptCard({ transaction }: { transaction: a
         <span className="font-bold text-slate-900">Balance outstanding</span>
         <strong className="text-teal-700">{Number(transaction.balance).toLocaleString()}</strong>
       </div>
+
+      {transaction.country2?.country?.trim().toLowerCase() === "chad" && (
+        <>
+          <div className="flex justify-between py-2.5 mt-2 px-3 rounded-lg bg-amber-50 text-sm">
+            <span className="font-semibold text-red-700">Divided amount</span>
+            <strong className="text-red-700">{(Number(transaction.total) / 5).toLocaleString()}</strong>
+          </div>
+          {transaction.chad_region && CHAD_OFFICES[transaction.chad_region] && (
+            <div className="flex justify-between py-2 text-sm mt-1">
+              <span className="text-slate-500">☎ Office ({transaction.chad_region})</span>
+              <span className="text-right">
+                <strong className="text-red-700 text-xs">{CHAD_OFFICES[transaction.chad_region].join(" / ")}</strong>
+                <span className="block text-[10px] text-slate-400 italic">09:00 – 17:00</span>
+              </span>
+            </div>
+          )}
+        </>
+      )}
 
       {transaction.notes && (
         <p className="text-xs text-slate-400 italic mt-3">Note: {transaction.notes}</p>

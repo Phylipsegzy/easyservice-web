@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import html2canvas from "html2canvas";
+import html2canvas from "html2canvas-pro";
 import { Download, Share2 } from "lucide-react";
 
 async function captureCanvas(targetId: string) {
