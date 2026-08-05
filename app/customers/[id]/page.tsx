@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { api } from "@/lib/api";
 import AppShell from "@/components/AppShell";
+import MoneyInput from "@/components/MoneyInput";
 import { Download } from "lucide-react";
 
 export default function CustomerDetailPage() {
@@ -214,7 +215,7 @@ export default function CustomerDetailPage() {
                 ))}
               </select>
             )}
-            <input type="number" step="0.0001" value={fundAmount} onChange={(e) => setFundAmount(e.target.value)} required placeholder="Amount" className="input" />
+            <MoneyInput value={fundAmount} onChange={setFundAmount} placeholder="Amount" className="input" required />
             <input value={fundRemark} onChange={(e) => setFundRemark(e.target.value)} placeholder="Remark (optional)" className="input" />
             <button type="submit" disabled={fundSubmitting} className="btn self-start">
               {fundSubmitting ? "Saving..." : "Fund wallet"}
@@ -244,7 +245,7 @@ export default function CustomerDetailPage() {
                 ))}
               </select>
             )}
-            <input type="number" step="0.0001" value={expAmount} onChange={(e) => setExpAmount(e.target.value)} required placeholder="Amount" className="input" />
+            <MoneyInput value={expAmount} onChange={setExpAmount} placeholder="Amount" className="input" required />
             <input value={expRemark} onChange={(e) => setExpRemark(e.target.value)} placeholder="What's this for?" className="input" />
             <button type="submit" disabled={expSubmitting} className="btn-outline self-start">
               {expSubmitting ? "Saving..." : "Charge expense"}

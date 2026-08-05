@@ -21,7 +21,7 @@ export default function PaymentStatusPage() {
   async function load(status: string, searchValue?: string) {
     setLoading(true);
     try {
-      const params: Record<string, string> = {};
+      const params: Record<string, string> = { scope: "payout" };
       if (status) params.payment_status = status;
       if (searchValue) params.search = searchValue;
       const res = await api.getTransactions(params);

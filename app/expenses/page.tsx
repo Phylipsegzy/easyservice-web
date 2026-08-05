@@ -4,8 +4,14 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import AppShell from "@/components/AppShell";
 import SearchInput from "@/components/SearchInput";
+import MoneyInput from "@/components/MoneyInput";
+
+type Tab = "expenses" | "funding";
 
 export default function ExpensesPage() {
+  const [tab, setTab] = useState<Tab>("expenses");
+
+  // Business expenses
   const [expenses, setExpenses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -14,11 +20,21 @@ export default function ExpensesPage() {
 
   const [description, setDescription] = useState("");
   const [unitPrice, setUnitPrice] = useState("");
-  const [qty, setQty] = useState("1");
+  const [qty, setQty] = useState("");
+  const [operation, setOperation] = useState<"multiply" | "divide">("multiply");
   const [vat, setVat] = useState("0");
   const [location, setLocation] = useState("");
 
-  // Staff wallet fund/expense section
+  // Live preview of the amount, matching the server's own calculation
+  const previewAmount = (() => {
+    const u = parseFloat(unitPrice) || 0;
+    const q = parseFloat(qty) || 0;
+    if (!u || !q) return null;
+    if (operation === "divide") return q === 0 ? "Cannot divide by zero" : (u / q).toLocaleString(undefined, { maximumFractionDigits: 4 });
+    return (u * q).toLocaleString(undefined, { maximumFractionDigits: 4 });
+  })();
+
+  // Staff wallet fund/expense
   const [myRole, setMyRole] = useState("");
   const [canAdjust, setCanAdjust] = useState(false);
   const [staff, setStaff] = useState<any[]>([]);
@@ -72,13 +88,15 @@ export default function ExpensesPage() {
         description,
         unit_price: parseFloat(unitPrice),
         qty: parseFloat(qty),
+        operation,
         vat: parseFloat(vat) || 0,
         location,
       });
       setDescription("");
       setUnitPrice("");
-      setQty("1");
+      setQty("");
       setVat("0");
+      setOperation("multiply");
       load();
     } catch (err: any) {
       setError(err.message);
@@ -132,82 +150,110 @@ export default function ExpensesPage() {
   const visibleExpenses = expenses.filter((e) => !search || e.description?.toLowerCase().includes(search.toLowerCase()));
 
   return (
-    <AppShell title="Expenses / Funding" subtitle="Business expenses and staff wallet funding">
+    <AppShell title="Expenses / Funding" subtitle="Business expenses and staff wallet funding — two separate things">
       <a href="/more" className="back-link md:hidden">&larr; More</a>
 
-      <h2 className="text-base font-semibold mb-2">Business expenses</h2>
-      <form onSubmit={handleAdd} className="card flex gap-3 flex-wrap items-end mb-6">
-        <div className="flex-1 min-w-[180px]">
-          <label className="label">Description</label>
-          <input value={description} onChange={(e) => setDescription(e.target.value)} required className="input w-full" />
-        </div>
-        <div>
-          <label className="label">Unit price</label>
-          <input type="number" step="0.01" value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} required className="input w-28" />
-        </div>
-        <div>
-          <label className="label">Qty</label>
-          <input type="number" step="0.01" value={qty} onChange={(e) => setQty(e.target.value)} required className="input w-20" />
-        </div>
-        <div>
-          <label className="label">VAT</label>
-          <input type="number" step="0.01" value={vat} onChange={(e) => setVat(e.target.value)} className="input w-24" />
-        </div>
-        <div>
-          <label className="label">Location</label>
-          <input value={location} onChange={(e) => setLocation(e.target.value)} className="input w-32" />
-        </div>
-        <button type="submit" disabled={submitting} className="btn">
-          {submitting ? "Adding..." : "Add"}
+      <div className="flex gap-2 mb-6">
+        <button onClick={() => setTab("expenses")} className={tab === "expenses" ? "btn" : "btn-ghost"}>
+          Expenses
         </button>
-      </form>
+        {canAdjust && (
+          <button onClick={() => setTab("funding")} className={tab === "funding" ? "btn" : "btn-ghost"}>
+            Staff Wallet Funding
+          </button>
+        )}
+      </div>
 
       {error && <p className="text-red-600 text-sm mb-4">{error}</p>}
-      <SearchInput value={search} onChange={setSearch} placeholder="Search by description..." />
-      {loading ? (
-        <p className="text-slate-400 text-sm">Loading...</p>
-      ) : (
-        <div className="table-wrap mb-10">
-          <table>
-            <thead>
-              <tr>
-                <th>Description</th>
-                <th>Unit price</th>
-                <th>Qty</th>
-                <th>Total</th>
-                <th>Status</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {visibleExpenses.map((e) => (
-                <tr key={e.id}>
-                  <td>{e.description}</td>
-                  <td>{e.unit_price}</td>
-                  <td>{e.qty}</td>
-                  <td className="font-medium">{e.total}</td>
-                  <td>
-                    <span className={`badge badge-${e.status === "approved" ? "completed" : "pending"}`}>{e.status}</span>
-                  </td>
-                  <td className="flex gap-2">
-                    {e.status !== "approved" && (
-                      <button onClick={() => handleApprove(e.id)} className="btn-ghost">Approve</button>
-                    )}
-                    <button onClick={() => handleDelete(e.id)} className="btn-danger">Delete</button>
-                  </td>
-                </tr>
-              ))}
-              {visibleExpenses.length === 0 && (
-                <tr><td colSpan={6} className="text-center text-slate-400 py-8">No expenses recorded yet.</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+
+      {tab === "expenses" && (
+        <>
+          <form onSubmit={handleAdd} className="card flex gap-3 flex-wrap items-end mb-6">
+            <div className="flex-1 min-w-[180px]">
+              <label className="label">Description</label>
+              <input value={description} onChange={(e) => setDescription(e.target.value)} required className="input w-full" />
+            </div>
+            <div>
+              <label className="label">Operation</label>
+              <select value={operation} onChange={(e) => setOperation(e.target.value as "multiply" | "divide")} className="input">
+                <option value="multiply">Multiply (unit price × qty)</option>
+                <option value="divide">Divide (unit price ÷ qty)</option>
+              </select>
+            </div>
+            <div>
+              <label className="label">Unit price</label>
+              <MoneyInput value={unitPrice} onChange={setUnitPrice} className="input w-28" required />
+            </div>
+            <div>
+              <label className="label">Qty</label>
+              <MoneyInput value={qty} onChange={setQty} className="input w-20" required />
+            </div>
+            <div>
+              <label className="label">VAT</label>
+              <MoneyInput value={vat} onChange={setVat} className="input w-24" />
+            </div>
+            <div>
+              <label className="label">Location</label>
+              <input value={location} onChange={(e) => setLocation(e.target.value)} className="input w-32" />
+            </div>
+            <button type="submit" disabled={submitting} className="btn">
+              {submitting ? "Adding..." : "Add"}
+            </button>
+            {previewAmount !== null && (
+              <p className="text-xs text-slate-400 w-full">
+                Amount will be: <strong className="text-slate-700">{previewAmount}</strong> {vat !== "0" && `+ ${vat} VAT`}
+              </p>
+            )}
+          </form>
+
+          <SearchInput value={search} onChange={setSearch} placeholder="Search by description..." />
+          {loading ? (
+            <p className="text-slate-400 text-sm">Loading...</p>
+          ) : (
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Description</th>
+                    <th>Operation</th>
+                    <th>Unit price</th>
+                    <th>Qty</th>
+                    <th>Total</th>
+                    <th>Status</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleExpenses.map((e) => (
+                    <tr key={e.id}>
+                      <td>{e.description}</td>
+                      <td className="text-slate-400 text-xs capitalize">{e.operation || "multiply"}</td>
+                      <td>{e.unit_price}</td>
+                      <td>{e.qty}</td>
+                      <td className="font-medium">{e.total}</td>
+                      <td>
+                        <span className={`badge badge-${e.status === "approved" ? "completed" : "pending"}`}>{e.status}</span>
+                      </td>
+                      <td className="flex gap-2">
+                        {e.status !== "approved" && (
+                          <button onClick={() => handleApprove(e.id)} className="btn-ghost">Approve</button>
+                        )}
+                        <button onClick={() => handleDelete(e.id)} className="btn-danger">Delete</button>
+                      </td>
+                    </tr>
+                  ))}
+                  {visibleExpenses.length === 0 && (
+                    <tr><td colSpan={7} className="text-center text-slate-400 py-8">No expenses recorded yet.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
       )}
 
-      {canAdjust && (
+      {tab === "funding" && canAdjust && (
         <>
-          <h2 className="text-base font-semibold mb-2">Staff wallet funding</h2>
           <p className="text-xs text-slate-400 mb-3">
             Direct credit or debit to a staff member's own wallet — logged to their statement, no receipt.
             {myRole === "manager" && " Limited to staff in your own country."}
@@ -223,16 +269,25 @@ export default function ExpensesPage() {
                 ))}
               </select>
             </div>
-            <div>
-              <label className="label">Action</label>
-              <select value={walletAction} onChange={(e) => setWalletAction(e.target.value as "fund" | "expense")} className="input">
-                <option value="fund">Fund (credit)</option>
-                <option value="expense">Expense (debit)</option>
-              </select>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setWalletAction("fund")}
+                className={walletAction === "fund" ? "btn" : "btn-ghost"}
+              >
+                Fund (credit)
+              </button>
+              <button
+                type="button"
+                onClick={() => setWalletAction("expense")}
+                className={walletAction === "expense" ? "btn" : "btn-ghost"}
+              >
+                Expense (debit)
+              </button>
             </div>
             <div>
               <label className="label">Amount</label>
-              <input type="number" step="0.0001" value={walletAmount} onChange={(e) => setWalletAmount(e.target.value)} required className="input w-32" />
+              <MoneyInput value={walletAmount} onChange={setWalletAmount} className="input w-32" required />
             </div>
             <div>
               <label className="label">Remark</label>

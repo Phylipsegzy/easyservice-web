@@ -227,7 +227,7 @@ export default function StaffTransfersPage() {
                   </td>
                   <td>{new Date(t.created_at).toLocaleDateString()}</td>
                   <td>
-                    {t.status === "completed" && (
+                    {t.status === "completed" && me?.role === "admin" && (
                       <button onClick={() => handleReverse(t.id)} className="btn-danger">Reverse</button>
                     )}
                   </td>

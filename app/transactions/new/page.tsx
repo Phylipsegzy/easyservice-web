@@ -9,6 +9,7 @@ import PhoneInput from "@/components/PhoneInput";
 import StepIndicator from "@/components/StepIndicator";
 import TransactionReceiptCard from "@/components/TransactionReceiptCard";
 import ReceiptActions from "@/components/ReceiptActions";
+import MoneyInput from "@/components/MoneyInput";
 import { useLanguage } from "@/lib/i18n";
 import { getRecentCustomers, addRecentCustomer } from "@/lib/recentCustomers";
 import { ArrowLeft, ArrowRight, UserPlus, CheckCircle2, Copy, Plus } from "lucide-react";
@@ -473,34 +474,25 @@ export default function NewTransactionPage() {
             </div>
             <div>
               <label className="label">{t("customer_pays")} ({sendingCountry?.currency_code})</label>
-              <input
-                type="number"
-                step="0.0001"
+              <MoneyInput
                 value={sendAmount}
-                onChange={(e) => handleSendAmountChange(e.target.value)}
-                placeholder="0.00"
-                autoFocus
+                onChange={handleSendAmountChange}
                 className="input w-full text-2xl font-bold py-4"
               />
             </div>
             <div>
               <label className="label">{t("recipient_gets")} ({receivingCountry?.currency_code})</label>
-              <input
-                type="number"
-                step="0.0001"
+              <MoneyInput
                 value={receiveAmount}
-                onChange={(e) => handleReceiveAmountChange(e.target.value)}
-                placeholder="0.00"
+                onChange={handleReceiveAmountChange}
                 className="input w-full text-2xl font-bold py-4"
               />
             </div>
             <div>
               <label className="label">{lang === "ar" ? "الدفعة المقدمة المستلمة" : "Advance received"}</label>
-              <input
-                type="number"
-                step="0.0001"
+              <MoneyInput
                 value={advance}
-                onChange={(e) => setAdvance(e.target.value)}
+                onChange={setAdvance}
                 placeholder="defaults to full amount"
                 className="input w-full"
               />
