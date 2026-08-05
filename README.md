@@ -1,36 +1,50 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# EasyService Web (Next.js) — Phase 0 + Phase 1 (Auth)
 
-## Getting Started
+## Setup
 
-First, run the development server:
+1. Create a fresh Next.js app (this environment can't reach npm registry setup interactively,
+   so do this on your machine):
+   ```
+   npx create-next-app@latest easyservice-web --typescript --app --no-tailwind --src-dir=false
+   cd easyservice-web
+   ```
+   (Answer "No" to Tailwind for now if you want to match these plain-CSS files exactly —
+   or say "Yes" and we'll restyle in a later phase, your call.)
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+2. Copy the folders from this package into your new project, overwriting matching paths:
+   - `app/login/page.tsx`
+   - `app/dashboard/page.tsx`
+   - `app/layout.tsx`
+   - `app/page.tsx`
+   - `lib/api.ts`
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+3. Copy `.env.local.example` to `.env.local` and adjust if your Laravel API runs elsewhere:
+   ```
+   cp .env.local.example .env.local
+   ```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+4. Run it:
+   ```
+   npm run dev
+   ```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Test it end-to-end
 
-## Learn More
+1. Make sure the Laravel API (`easyservice-api`) is running on `http://localhost:8000`
+   with a test user created (see its README).
+2. Visit `http://localhost:3000` → redirects to `/login`.
+3. Log in with the test user (e.g. `admin` / `password`).
+4. You should land on `/dashboard` showing your name, role, and location — confirming
+   the full Next.js → Laravel → MySQL round trip works.
 
-To learn more about Next.js, take a look at the following resources:
+## What's included in this phase
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `lib/api.ts` — typed fetch client, stores the Sanctum token in `localStorage`,
+  attaches `Authorization: Bearer` automatically.
+- `/login` — login form calling `POST /api/login`.
+- `/dashboard` — protected page calling `GET /api/me`, redirects to `/login` if not authenticated.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Next phase
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Phase 2: currency & rate management pages (list/create/edit currencies and currency groups),
+consuming the CurrencyController endpoints from the API side.
