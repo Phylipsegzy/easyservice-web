@@ -117,21 +117,21 @@ export default function StatementPage() {
           </div>
 
           <div className="table-wrap">
-            <table className="w-full">
+            <table className="w-full table-fixed">
               <thead>
                 <tr>
-                  <th className="whitespace-nowrap">{lang === "ar" ? "التاريخ" : "Date"}</th>
+                  <th className="w-32 whitespace-nowrap">{lang === "ar" ? "التاريخ" : "Date"}</th>
                   <th>{lang === "ar" ? "التفاصيل" : "Details"}</th>
-                  <th className="whitespace-nowrap">{lang === "ar" ? "دائن" : "Credit"}</th>
-                  <th className="whitespace-nowrap">{lang === "ar" ? "مدين" : "Debit"}</th>
-                  <th className="whitespace-nowrap">{lang === "ar" ? "الرصيد" : "Balance"}</th>
+                  <th className="w-24 whitespace-nowrap">{lang === "ar" ? "دائن" : "Credit"}</th>
+                  <th className="w-24 whitespace-nowrap">{lang === "ar" ? "مدين" : "Debit"}</th>
+                  <th className="w-28 whitespace-nowrap">{lang === "ar" ? "الرصيد" : "Balance"}</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((r: any) => (
                   <tr key={r.id}>
                     <td className="whitespace-nowrap text-xs text-slate-500">{new Date(r.created_at).toLocaleString()}</td>
-                    <td className="break-words max-w-0 w-full">{r.details}</td>
+                    <td className="whitespace-normal break-words">{r.details}</td>
                     <td className="text-emerald-600 whitespace-nowrap">{Number(r.credit_amount) ? Number(r.credit_amount).toLocaleString() : "—"}</td>
                     <td className="text-red-600 whitespace-nowrap">{Number(r.debit_amount) ? Number(r.debit_amount).toLocaleString() : "—"}</td>
                     <td className="font-semibold whitespace-nowrap">{Number(r.balance).toLocaleString()}</td>

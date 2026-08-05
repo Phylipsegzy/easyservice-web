@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import AppShell from "@/components/AppShell";
 import { useLanguage } from "@/lib/i18n";
-import { enablePush, disablePush, getPushPermissionState } from "@/lib/push";
+import { enablePush, disablePush, getPushPermissionState, isPushSubscribed } from "@/lib/push";
 import { Bell, BellOff } from "lucide-react";
 
 export default function AccountPage() {
@@ -20,11 +20,13 @@ export default function AccountPage() {
   const [savingLang, setSavingLang] = useState(false);
 
   const [pushState, setPushState] = useState<NotificationPermission | "unsupported">("default");
+  const [pushSubscribed, setPushSubscribed] = useState(false);
   const [pushBusy, setPushBusy] = useState(false);
   const [pushError, setPushError] = useState("");
 
   useEffect(() => {
     getPushPermissionState().then(setPushState);
+    isPushSubscribed().then(setPushSubscribed);
     api.me().then((res) => setProfile(res.user)).catch(() => {});
     api.getAccountStats().then((res) => setStats(res.stats)).catch(() => {});
   }, []);
@@ -69,9 +71,11 @@ export default function AccountPage() {
     const res = await enablePush();
     if (res.ok) {
       setPushState("granted");
+      setPushSubscribed(true);
     } else {
       setPushError(res.error || "Could not enable push notifications.");
       setPushState(await getPushPermissionState());
+      setPushSubscribed(await isPushSubscribed());
     }
     setPushBusy(false);
   }
@@ -80,6 +84,7 @@ export default function AccountPage() {
     setPushBusy(true);
     await disablePush();
     setPushState(await getPushPermissionState());
+    setPushSubscribed(await isPushSubscribed());
     setPushBusy(false);
   }
 
@@ -166,7 +171,7 @@ export default function AccountPage() {
           <p className="text-sm text-slate-400">
             Blocked in your browser settings. Enable notifications for this site in your browser to turn this back on.
           </p>
-        ) : pushState === "granted" ? (
+        ) : pushSubscribed ? (
           <div>
             <p className="text-sm text-emerald-600 flex items-center gap-1.5 mb-3">
               <Bell size={15} /> Enabled on this device

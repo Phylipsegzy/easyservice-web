@@ -20,11 +20,35 @@ export async function getPushPermissionState(): Promise<NotificationPermission |
   return Notification.permission;
 }
 
+// Whether there's an ACTUAL live subscription right now — separate from browser
+// permission, which stays "granted" forever once granted even after you
+// unsubscribe. This is the signal the UI should actually key off of.
+export async function isPushSubscribed(): Promise<boolean> {
+  if (!isPushSupported()) return false;
+  try {
+    const registration = await navigator.serviceWorker.getRegistration();
+    const subscription = await registration?.pushManager.getSubscription();
+    return !!subscription;
+  } catch {
+    return false;
+  }
+}
+
 export async function enablePush(): Promise<{ ok: boolean; error?: string }> {
   if (!isPushSupported()) return { ok: false, error: "This browser doesn't support push notifications." };
 
   const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
   if (!vapidKey) return { ok: false, error: "Push isn't configured on the server yet." };
+
+  // If permission was already denied on an earlier attempt, the browser won't
+  // show a prompt at all this time — it just silently stays denied. Surface
+  // that clearly instead of leaving it looking like nothing happened.
+  if (Notification.permission === "denied") {
+    return {
+      ok: false,
+      error: "Notifications are blocked for this site in your browser. You'll need to allow them in your browser's site settings (tap the lock/info icon next to the address bar), then try again.",
+    };
+  }
 
   const permission = await Notification.requestPermission();
   if (permission !== "granted") return { ok: false, error: "Notification permission was not granted." };
