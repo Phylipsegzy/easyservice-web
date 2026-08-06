@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { api, clearToken } from "@/lib/api";
 import { useLanguage } from "@/lib/i18n";
 import NotificationBell from "@/components/NotificationBell";
+import TransferPopup from "@/components/TransferPopup";
 import {
   LayoutDashboard,
   ArrowLeftRight,
@@ -120,6 +121,7 @@ export default function AppShell({
   // padding-left (or a stray z-index) let them collide. Flexbox can't drift.
   return (
     <div className="min-h-screen flex bg-slate-50" dir={dir}>
+      {pathname !== "/staff-transfers" && <TransferPopup />}
       {/* Desktop sidebar */}
       <aside className={`hidden md:flex md:flex-col md:w-64 md:h-screen md:sticky md:top-0 md:flex-shrink-0 bg-white border-slate-200 px-3 py-6 ${dir === "rtl" ? "border-l" : "border-r"}`}>
         <div className="flex items-center justify-between px-3 mb-8 flex-shrink-0">

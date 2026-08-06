@@ -1,18 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import AppShell from "@/components/AppShell";
 import CustomerPicker, { PickedCustomer } from "@/components/CustomerPicker";
 import PhoneInput from "@/components/PhoneInput";
 import StepIndicator from "@/components/StepIndicator";
-import TransactionReceiptCard from "@/components/TransactionReceiptCard";
-import ReceiptActions from "@/components/ReceiptActions";
 import MoneyInput from "@/components/MoneyInput";
 import { useLanguage } from "@/lib/i18n";
 import { getRecentCustomers, addRecentCustomer } from "@/lib/recentCustomers";
-import { ArrowLeft, ArrowRight, UserPlus, CheckCircle2, Copy, Plus } from "lucide-react";
+import { ArrowLeft, ArrowRight, UserPlus } from "lucide-react";
 
 type Currency = { id: number; country: string; currency_code: string };
 type CurrencyGroupRow = {
@@ -27,13 +25,13 @@ type CurrencyGroupRow = {
 const STEPS = ["Customer", "Route", "Amount", "Review"];
 
 export default function NewTransactionPage() {
+  const router = useRouter();
   const { lang, t } = useLanguage();
   const [step, setStep] = useState(1);
   const [currencies, setCurrencies] = useState<Currency[]>([]);
   const [corridors, setCorridors] = useState<CurrencyGroupRow[]>([]);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [result, setResult] = useState<any>(null); // set once the invoice is created
 
   // --- Customer ---
   const [customer, setCustomer] = useState<PickedCustomer | null>(null);
@@ -234,7 +232,8 @@ export default function NewTransactionPage() {
       else payload.subtotal = parseFloat(receiveAmount);
 
       const res = await api.createTransaction(payload);
-      setResult(res.transaction);
+      router.push(`/transactions/${res.transaction.id}/receipt`);
+      return; // skip further success-screen state — we're navigating away to the full receipt page
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -243,7 +242,6 @@ export default function NewTransactionPage() {
   }
 
   function resetForm() {
-    setResult(null);
     setStep(1);
     setCustomer(null);
     setSendingCountryId("");
@@ -261,50 +259,6 @@ export default function NewTransactionPage() {
   // Success screen (post-submit) — mirrors a typical send-money app's
   // confirmation screen: reference code front and center, then details.
   // ------------------------------------------------------------------
-  if (result) {
-    return (
-      <AppShell title={lang === "ar" ? "تم إنشاء الفاتورة" : "Invoice generated"}>
-        <div className="max-w-xl mx-auto">
-          <div className="card flex flex-col items-center text-center gap-1.5 py-8">
-            <CheckCircle2 size={44} className="text-emerald-500 mb-1" />
-            <p className="text-slate-500 text-sm">{lang === "ar" ? "تم إنشاء الفاتورة بنجاح" : "Invoice created successfully"}</p>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="font-mono text-lg font-bold tracking-wide">{result.tranx_ref}</span>
-              <button
-                type="button"
-                onClick={() => navigator.clipboard.writeText(result.tranx_ref)}
-                className="text-slate-400 hover:text-teal-600"
-                aria-label="Copy reference"
-              >
-                <Copy size={15} />
-              </button>
-            </div>
-          </div>
-
-          <div className="mt-4">
-            <TransactionReceiptCard transaction={result} />
-          </div>
-
-          <div className="mt-4">
-            <ReceiptActions
-              targetId="receipt-card"
-              filename={`receipt-${result.tranx_ref}.png`}
-              shareTitle={`Receipt ${result.tranx_ref}`}
-            />
-          </div>
-
-          <div className="flex gap-3 mt-5 flex-wrap">
-            <Link href={`/transactions/${result.id}`} className="btn-outline no-underline">
-              {lang === "ar" ? "عرض الفاتورة الكاملة" : "View full invoice"}
-            </Link>
-            <button type="button" onClick={resetForm} className="btn-outline flex items-center gap-1.5">
-              <Plus size={15} /> {lang === "ar" ? "فاتورة جديدة" : "New invoice"}
-            </button>
-          </div>
-        </div>
-      </AppShell>
-    );
-  }
 
   return (
     <AppShell title={t("new_invoice")} subtitle={lang === "ar" ? "إنشاء فاتورة إرسال / استلام" : "Generate a send/receive invoice"}>
