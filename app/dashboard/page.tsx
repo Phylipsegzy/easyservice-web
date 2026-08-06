@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import AppShell from "@/components/AppShell";
 import { ArrowLeftRight, Users, Coins, Send, Receipt, BarChart3, Wallet } from "lucide-react";
@@ -16,7 +15,6 @@ const shortcuts = [
 ];
 
 export default function DashboardPage() {
-  const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -24,9 +22,9 @@ export default function DashboardPage() {
     api
       .me()
       .then((res) => setUser(res.user))
-      .catch(() => router.push("/login"))
+      .catch(() => {})
       .finally(() => setLoading(false));
-  }, [router]);
+  }, []);
 
   if (loading) {
     return (

@@ -19,6 +19,8 @@ export function clearToken() {
   localStorage.removeItem("easyservice_token");
 }
 
+let redirectingToLogin = false;
+
 async function request<T = any>(
   path: string,
   options: RequestInit = {}
@@ -30,6 +32,11 @@ async function request<T = any>(
     headers: {
       "Content-Type": "application/json",
       Accept: "application/json",
+      // Only relevant when API_URL points at an ngrok tunnel (local dev/testing)
+      // — ngrok's free tier otherwise intercepts requests with its own browser
+      // warning page, which has no CORS headers and silently breaks every call.
+      // Harmless no-op against a real production domain.
+      "ngrok-skip-browser-warning": "true",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.headers || {}),
     },
@@ -45,7 +52,14 @@ async function request<T = any>(
     // pages caught the error, rendered with no data, and looked broken
     // instead of bouncing to /login). Skip this for the login endpoint
     // itself — a wrong password there should show an error, not redirect.
-    if (res.status === 401 && path !== "/login" && typeof window !== "undefined") {
+    if (
+      res.status === 401 &&
+      path !== "/login" &&
+      typeof window !== "undefined" &&
+      !redirectingToLogin &&
+      window.location.pathname !== "/login"
+    ) {
+      redirectingToLogin = true;
       clearToken();
       window.location.href = "/login";
     }
@@ -194,7 +208,7 @@ export const api = {
     const token = getToken();
     const qs = params ? `?${new URLSearchParams(params).toString()}` : "";
     const res = await fetch(`${API_URL}/reports/customer/${customerId}/monthly-pdf${qs}`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      headers: { "ngrok-skip-browser-warning": "true", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     });
     if (!res.ok) throw new Error("Could not generate the report PDF");
     return res.blob();
@@ -208,7 +222,7 @@ export const api = {
     const token = getToken();
     const qs = new URLSearchParams({ type, ...(params || {}) }).toString();
     const res = await fetch(`${API_URL}/reports/export-pdf?${qs}`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      headers: { "ngrok-skip-browser-warning": "true", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     });
     if (!res.ok) throw new Error("Could not generate the report PDF");
     return res.blob();
@@ -262,7 +276,7 @@ export const api = {
     const token = getToken();
     const qs = params ? `?${new URLSearchParams(params).toString()}` : "";
     const res = await fetch(`${API_URL}/staff/${userId}/statements-pdf${qs}`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      headers: { "ngrok-skip-browser-warning": "true", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     });
     if (!res.ok) throw new Error("Could not generate the statement PDF");
     return res.blob();
@@ -305,7 +319,7 @@ export const api = {
     const token = getToken();
     const res = await fetch(`${API_URL}/transactions/${transactionId}/evidence`, {
       method: "POST",
-      headers: { Accept: "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      headers: { Accept: "application/json", "ngrok-skip-browser-warning": "true", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       body: form,
     });
     const data = await res.json();
