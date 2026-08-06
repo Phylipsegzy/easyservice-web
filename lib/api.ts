@@ -38,6 +38,17 @@ async function request<T = any>(
   const data = await res.json();
 
   if (!res.ok) {
+    // Any authenticated request failing with 401 means there's no valid
+    // session — redirect to login from here, the one place ALL API calls
+    // pass through, rather than relying on every page to notice and handle
+    // it individually (which is exactly what was silently failing before:
+    // pages caught the error, rendered with no data, and looked broken
+    // instead of bouncing to /login). Skip this for the login endpoint
+    // itself — a wrong password there should show an error, not redirect.
+    if (res.status === 401 && path !== "/login" && typeof window !== "undefined") {
+      clearToken();
+      window.location.href = "/login";
+    }
     throw new Error(data.message || "Request failed");
   }
 
