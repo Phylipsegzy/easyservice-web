@@ -51,6 +51,8 @@ export default function NewTransactionPage() {
   const [sendingCountryId, setSendingCountryId] = useState("");
   const [receivingCountryId, setReceivingCountryId] = useState("");
   const [rate, setRate] = useState("");
+  const [specialRates, setSpecialRates] = useState<any[]>([]);
+  const [usingSpecialRateId, setUsingSpecialRateId] = useState<number | null>(null);
 
   // --- Amount (bidirectional) ---
   const [sendAmount, setSendAmount] = useState("");
@@ -87,6 +89,12 @@ export default function NewTransactionPage() {
 
   useEffect(() => {
     if (customer?.country_id) setSendingCountryId(String(customer.country_id));
+    setUsingSpecialRateId(null);
+    if (customer?.id) {
+      api.getSpecialRates({ customer_id: String(customer.id) }).then((res) => setSpecialRates(res.special_rates)).catch(() => setSpecialRates([]));
+    } else {
+      setSpecialRates([]);
+    }
   }, [customer]);
 
   useEffect(() => {
@@ -102,6 +110,7 @@ export default function NewTransactionPage() {
   useEffect(() => {
     const match = corridors.find((c) => String(c.country2_id) === receivingCountryId);
     setRate(match ? String(match.rate) : "");
+    setUsingSpecialRateId(null);
   }, [receivingCountryId, corridors]);
 
   useEffect(() => {
@@ -437,7 +446,7 @@ export default function NewTransactionPage() {
                     type="number"
                     step="0.000001"
                     value={rate}
-                    onChange={(e) => setRate(e.target.value)}
+                    onChange={(e) => { setRate(e.target.value); setUsingSpecialRateId(null); }}
                     className="input w-full"
                   />
                 </div>
@@ -447,6 +456,32 @@ export default function NewTransactionPage() {
                   <strong>{rate}</strong>
                 </div>
               )
+            )}
+            {specialRates.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-slate-400 mb-1.5">
+                  {lang === "ar" ? "أسعار خاصة لهذا العميل" : "Special rates for this customer"}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {specialRates.map((sr) => (
+                    <button
+                      key={sr.id}
+                      type="button"
+                      onClick={() => {
+                        setRate(String(sr.customer_rate));
+                        setUsingSpecialRateId(sr.id);
+                      }}
+                      className={`text-xs font-semibold px-3 py-1.5 rounded-full border transition-colors ${
+                        usingSpecialRateId === sr.id
+                          ? "bg-amber-500 text-white border-amber-500"
+                          : "bg-amber-50 text-amber-700 border-amber-200 hover:border-amber-400"
+                      }`}
+                    >
+                      {sr.name || "Special rate"} — {sr.customer_rate}
+                    </button>
+                  ))}
+                </div>
+              </div>
             )}
             {isChadDestination && (
               <div>

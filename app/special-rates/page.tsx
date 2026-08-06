@@ -11,6 +11,7 @@ export default function SpecialRatesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [customer, setCustomer] = useState<PickedCustomer | null>(null);
+  const [rateName, setRateName] = useState("");
   const [rate, setRate] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [search, setSearch] = useState("");
@@ -37,8 +38,9 @@ export default function SpecialRatesPage() {
     setError("");
     setSubmitting(true);
     try {
-      await api.createSpecialRate({ customer_id: customer.id, customer_rate: parseFloat(rate) });
+      await api.createSpecialRate({ customer_id: customer.id, name: rateName || undefined, customer_rate: parseFloat(rate) });
       setCustomer(null);
+      setRateName("");
       setRate("");
       load();
     } catch (err: any) {
@@ -62,6 +64,10 @@ export default function SpecialRatesPage() {
           <CustomerPicker selected={customer} onSelect={setCustomer} onCreateNew={() => {}} />
         </div>
         <div>
+          <label className="label">Name (optional)</label>
+          <input value={rateName} onChange={(e) => setRateName(e.target.value)} placeholder="e.g. VIP rate — above 1M" className="input w-full" />
+        </div>
+        <div>
           <label className="label">Special rate</label>
           <input type="number" step="0.0001" value={rate} onChange={(e) => setRate(e.target.value)} required className="input w-full" />
         </div>
@@ -80,6 +86,7 @@ export default function SpecialRatesPage() {
             <thead>
               <tr>
                 <th>Customer</th>
+                <th>Name</th>
                 <th>Rate</th>
                 <th></th>
               </tr>
@@ -88,6 +95,7 @@ export default function SpecialRatesPage() {
               {rates.filter((r) => !search || r.customer?.customer_name?.toLowerCase().includes(search.toLowerCase())).map((r) => (
                 <tr key={r.id}>
                   <td className="font-medium">{r.customer?.customer_name}</td>
+                  <td className="text-slate-500">{r.name || "—"}</td>
                   <td>{r.customer_rate}</td>
                   <td>
                     <button onClick={() => handleDelete(r.id)} className="btn-danger">Remove</button>
@@ -95,7 +103,7 @@ export default function SpecialRatesPage() {
                 </tr>
               ))}
               {rates.length === 0 && (
-                <tr><td colSpan={3} className="text-center text-slate-400 py-8">No special rates set.</td></tr>
+                <tr><td colSpan={4} className="text-center text-slate-400 py-8">No special rates set.</td></tr>
               )}
             </tbody>
           </table>

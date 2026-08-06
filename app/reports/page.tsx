@@ -7,7 +7,7 @@ import AppShell from "@/components/AppShell";
 import { useLanguage } from "@/lib/i18n";
 import { FileSpreadsheet, FileText, Search } from "lucide-react";
 
-type Tab = "summary" | "country" | "transfers" | "customer";
+type Tab = "summary" | "country" | "transfers" | "customer" | "staff_statement" | "customer_funding";
 
 export default function ReportsPage() {
   const { t, lang } = useLanguage();
@@ -58,7 +58,7 @@ export default function ReportsPage() {
   }
 
   useEffect(() => {
-    if (tab !== "customer") load(tab);
+    if (tab !== "customer" && tab !== "staff_statement" && tab !== "customer_funding") load(tab);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab]);
 
@@ -79,6 +79,139 @@ export default function ReportsPage() {
   }, [customerSearch]);
 
   const [reportCurrencyId, setReportCurrencyId] = useState("");
+
+  // Staff Statement tab
+  const [myProfile, setMyProfile] = useState<any>(null);
+  const [statementStaffList, setStatementStaffList] = useState<any[]>([]);
+  const [statementStaffId, setStatementStaffId] = useState("");
+  const [staffStatement, setStaffStatement] = useState<any>(null);
+  const [staffStatementLoading, setStaffStatementLoading] = useState(false);
+  const [staffStatementError, setStaffStatementError] = useState("");
+
+  useEffect(() => {
+    api.me().then(async (res) => {
+      setMyProfile(res.user);
+      if (res.user.role === "admin" || res.user.role === "manager") {
+        const staffRes = await api.getStaff();
+        const list = res.user.role === "admin"
+          ? staffRes.staff
+          : staffRes.staff.filter((s: any) => s.location?.toLowerCase() === res.user.location?.toLowerCase());
+        setStatementStaffList(list);
+      } else {
+        setStatementStaffId(String(res.user.id));
+      }
+    }).catch(() => {});
+  }, []);
+
+  async function loadStaffStatement(staffId: number) {
+    setStaffStatementLoading(true);
+    setStaffStatementError("");
+    try {
+      const params: Record<string, string> = {};
+      if (from) params.from = from;
+      if (to) params.to = to;
+      const res = await api.getStaffStatements(staffId, params);
+      setStaffStatement(res);
+    } catch (err: any) {
+      setStaffStatementError(err.message);
+      setStaffStatement(null);
+    } finally {
+      setStaffStatementLoading(false);
+    }
+  }
+
+  async function handleExportStaffStatementPdf() {
+    if (!statementStaffId) return;
+    setExporting("pdf");
+    try {
+      const params: Record<string, string> = {};
+      if (from) params.from = from;
+      if (to) params.to = to;
+      const blob = await api.exportStaffStatementPdf(Number(statementStaffId), params);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `staff-statement-${statementStaffId}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      setStaffStatementError(err.message);
+    } finally {
+      setExporting(null);
+    }
+  }
+
+  function handleExportStaffStatementExcel() {
+    if (!staffStatement) return;
+    setExporting("excel");
+    try {
+      const rows = staffStatement.statements.data.map((r: any) => ({
+        Details: r.details,
+        Credit: r.credit_amount,
+        Debit: r.debit_amount,
+        Balance: r.balance,
+        Date: new Date(r.created_at).toLocaleString(),
+      }));
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Statement");
+      XLSX.writeFile(wb, `staff-statement-${staffStatement.staff.username}.xlsx`);
+    } finally {
+      setExporting(null);
+    }
+  }
+
+  // Customer Funding/Expense tab
+  const [fundingType, setFundingType] = useState<"all" | "fund" | "expense">("all");
+  const [customerFunding, setCustomerFunding] = useState<any>(null);
+  const [customerFundingLoading, setCustomerFundingLoading] = useState(false);
+  const [customerFundingError, setCustomerFundingError] = useState("");
+
+  async function loadCustomerFunding() {
+    setCustomerFundingLoading(true);
+    setCustomerFundingError("");
+    try {
+      const params: Record<string, string> = { type: fundingType };
+      if (from) params.from = from;
+      if (to) params.to = to;
+      const res = await api.getCustomerFundingReport(params);
+      setCustomerFunding(res);
+    } catch (err: any) {
+      setCustomerFundingError(err.message);
+      setCustomerFunding(null);
+    } finally {
+      setCustomerFundingLoading(false);
+    }
+  }
+
+  function handleExportCustomerFundingExcel() {
+    if (!customerFunding) return;
+    setExporting("excel");
+    try {
+      const rows = customerFunding.rows.data.map((r: any) => ({
+        Customer: r.customer_name,
+        Country: r.customer_location,
+        Type: r.description,
+        Amount: r.amount,
+        Currency: r.currency_code,
+        Balance: r.customer_balance,
+        Staff: r.staff_name,
+        Remark: r.remark || "",
+        Date: new Date(r.created_at).toLocaleString(),
+      }));
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Customer Funding");
+      XLSX.writeFile(wb, `customer-funding-${fundingType}.xlsx`);
+    } finally {
+      setExporting(null);
+    }
+  }
+
+  useEffect(() => {
+    if (tab === "customer_funding") loadCustomerFunding();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab]);
 
   async function loadCustomerReport(customerId: number, currencyId?: string) {
     setCustomerReportLoading(true);
@@ -214,19 +347,21 @@ export default function ReportsPage() {
     country: lang === "ar" ? "ملخص الدولة" : "Country Summary",
     transfers: lang === "ar" ? "تقرير التحويلات" : "Transfer Report",
     customer: lang === "ar" ? "تقرير العميل" : "Customer Report",
+    staff_statement: lang === "ar" ? "كشف حساب الموظف" : "Staff Statement",
+    customer_funding: lang === "ar" ? "تمويل/مصروفات العملاء" : "Customer Funding/Expense",
   };
 
   return (
     <AppShell title={lang === "ar" ? "التقارير" : "Reports"} subtitle={lang === "ar" ? "نظرة عامة على أداء الأعمال" : "Business performance overview"}>
       <div className="flex gap-2 mb-5 flex-wrap items-center justify-between">
         <div className="flex gap-2 flex-wrap">
-          {(["summary", "country", "transfers", "customer"] as Tab[]).map((tb) => (
+          {(["summary", "country", "transfers", "customer", "staff_statement", "customer_funding"] as Tab[]).map((tb) => (
             <button key={tb} onClick={() => setTab(tb)} className={tab === tb ? "btn" : "btn-ghost"}>
               {tabLabel[tb]}
             </button>
           ))}
         </div>
-        {tab !== "customer" && (
+        {tab !== "customer" && tab !== "staff_statement" && tab !== "customer_funding" && (
           <div className="flex gap-2">
             <button onClick={handleExportExcel} disabled={exporting !== null} className="btn-outline flex items-center gap-1.5">
               <FileSpreadsheet size={15} /> {lang === "ar" ? "تصدير Excel" : "Export Excel"}
@@ -238,7 +373,7 @@ export default function ReportsPage() {
         )}
       </div>
 
-      {tab !== "country" && tab !== "customer" && (
+      {tab !== "country" && tab !== "customer" && tab !== "staff_statement" && tab !== "customer_funding" && (
         <div className="flex gap-2 mb-6 items-end flex-wrap">
           <div>
             <label className="label">{lang === "ar" ? "من" : "From"}</label>
@@ -500,6 +635,186 @@ export default function ReportsPage() {
               ) : null}
             </>
           )}
+        </div>
+      )}
+
+      {tab === "staff_statement" && (
+        <div>
+          {(myProfile?.role === "admin" || myProfile?.role === "manager") && (
+            <div className="flex gap-2 mb-6 items-end flex-wrap">
+              <div>
+                <label className="label">{lang === "ar" ? "الموظف" : "Staff member"}</label>
+                <select value={statementStaffId} onChange={(e) => setStatementStaffId(e.target.value)} className="input">
+                  <option value="">{lang === "ar" ? "اختر" : "Select"}</option>
+                  {myProfile?.role === "manager" && (
+                    <option value={myProfile.id}>{lang === "ar" ? "أنا" : "Myself"}</option>
+                  )}
+                  {statementStaffList.map((s) => (
+                    <option key={s.id} value={s.id}>{s.name} ({s.username})</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="label">{lang === "ar" ? "من" : "From"}</label>
+                <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="input" />
+              </div>
+              <div>
+                <label className="label">{lang === "ar" ? "إلى" : "To"}</label>
+                <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="input" />
+              </div>
+              <button onClick={() => statementStaffId && loadStaffStatement(Number(statementStaffId))} disabled={!statementStaffId} className="btn">
+                {lang === "ar" ? "تطبيق" : "Apply"}
+              </button>
+              <button onClick={handleExportStaffStatementExcel} disabled={exporting !== null || !staffStatement} className="btn-outline flex items-center gap-1.5">
+                <FileSpreadsheet size={15} /> {lang === "ar" ? "تصدير Excel" : "Export Excel"}
+              </button>
+              <button onClick={handleExportStaffStatementPdf} disabled={exporting !== null || !statementStaffId} className="btn-outline flex items-center gap-1.5">
+                <FileText size={15} /> {exporting === "pdf" ? "..." : lang === "ar" ? "تصدير PDF" : "Export PDF"}
+              </button>
+            </div>
+          )}
+
+          {myProfile && myProfile.role !== "admin" && myProfile.role !== "manager" && (
+            <div className="flex gap-2 mb-6 items-end flex-wrap">
+              <div>
+                <label className="label">{lang === "ar" ? "من" : "From"}</label>
+                <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="input" />
+              </div>
+              <div>
+                <label className="label">{lang === "ar" ? "إلى" : "To"}</label>
+                <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="input" />
+              </div>
+              <button onClick={() => loadStaffStatement(myProfile.id)} className="btn">{lang === "ar" ? "تطبيق" : "Apply"}</button>
+              <button onClick={handleExportStaffStatementExcel} disabled={exporting !== null || !staffStatement} className="btn-outline flex items-center gap-1.5">
+                <FileSpreadsheet size={15} /> {lang === "ar" ? "تصدير Excel" : "Export Excel"}
+              </button>
+              <button onClick={handleExportStaffStatementPdf} disabled={exporting !== null} className="btn-outline flex items-center gap-1.5">
+                <FileText size={15} /> {exporting === "pdf" ? "..." : lang === "ar" ? "تصدير PDF" : "Export PDF"}
+              </button>
+            </div>
+          )}
+
+          {staffStatementError && <p className="text-red-600 text-sm mb-4">{staffStatementError}</p>}
+          {staffStatementLoading ? (
+            <p className="text-slate-400 text-sm">{t("loading")}</p>
+          ) : staffStatement ? (
+            <>
+              <div className="flex gap-3 mb-6 flex-wrap">
+                {card(lang === "ar" ? "الرصيد الحالي" : "Current wallet", Number(staffStatement.staff.wallet).toLocaleString())}
+                {card(lang === "ar" ? "إجمالي الوارد" : "Total in", Number(staffStatement.totals.total_in).toLocaleString())}
+                {card(lang === "ar" ? "إجمالي الصادر" : "Total out", Number(staffStatement.totals.total_out).toLocaleString())}
+              </div>
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>{lang === "ar" ? "التفاصيل" : "Details"}</th>
+                      <th>{lang === "ar" ? "دائن" : "Credit"}</th>
+                      <th>{lang === "ar" ? "مدين" : "Debit"}</th>
+                      <th>{lang === "ar" ? "الرصيد" : "Balance"}</th>
+                      <th>{t("date")}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {staffStatement.statements.data.map((r: any) => (
+                      <tr key={r.id}>
+                        <td>{r.details}</td>
+                        <td className="text-emerald-600">{r.credit_amount > 0 ? Number(r.credit_amount).toLocaleString() : "—"}</td>
+                        <td className="text-red-600">{r.debit_amount > 0 ? Number(r.debit_amount).toLocaleString() : "—"}</td>
+                        <td>{Number(r.balance).toLocaleString()}</td>
+                        <td className="whitespace-nowrap text-xs text-slate-500">{new Date(r.created_at).toLocaleString()}</td>
+                      </tr>
+                    ))}
+                    {staffStatement.statements.data.length === 0 && (
+                      <tr><td colSpan={5} className="text-center text-slate-400 py-8">{lang === "ar" ? "لا توجد سجلات." : "No records."}</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          ) : null}
+        </div>
+      )}
+
+      {tab === "customer_funding" && (
+        <div>
+          <div className="flex gap-2 mb-6 items-end flex-wrap">
+            <div>
+              <label className="label">{lang === "ar" ? "النوع" : "Type"}</label>
+              <select value={fundingType} onChange={(e) => setFundingType(e.target.value as "all" | "fund" | "expense")} className="input">
+                <option value="all">{lang === "ar" ? "الكل" : "All"}</option>
+                <option value="fund">{lang === "ar" ? "تمويل فقط" : "Funding only"}</option>
+                <option value="expense">{lang === "ar" ? "مصروفات فقط" : "Expense only"}</option>
+              </select>
+            </div>
+            <div>
+              <label className="label">{lang === "ar" ? "من" : "From"}</label>
+              <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="input" />
+            </div>
+            <div>
+              <label className="label">{lang === "ar" ? "إلى" : "To"}</label>
+              <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="input" />
+            </div>
+            <button onClick={loadCustomerFunding} className="btn">{lang === "ar" ? "تطبيق" : "Apply"}</button>
+            <button onClick={handleExportCustomerFundingExcel} disabled={exporting !== null || !customerFunding} className="btn-outline flex items-center gap-1.5">
+              <FileSpreadsheet size={15} /> {lang === "ar" ? "تصدير Excel" : "Export Excel"}
+            </button>
+          </div>
+
+          {myProfile && myProfile.role !== "admin" && (
+            <p className="text-xs text-slate-400 mb-4">
+              {lang === "ar" ? "يظهر فقط عملاء بلدك." : "Only showing customers in your own country."}
+            </p>
+          )}
+
+          {customerFundingError && <p className="text-red-600 text-sm mb-4">{customerFundingError}</p>}
+          {customerFundingLoading ? (
+            <p className="text-slate-400 text-sm">{t("loading")}</p>
+          ) : customerFunding ? (
+            <>
+              <div className="flex gap-3 mb-6 flex-wrap">
+                {card(lang === "ar" ? "إجمالي التمويل" : "Total funded", Number(customerFunding.totals.total_funded).toLocaleString())}
+                {card(lang === "ar" ? "إجمالي المصروفات" : "Total expensed", Number(customerFunding.totals.total_expensed).toLocaleString())}
+              </div>
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>{t("customer")}</th>
+                      <th>{lang === "ar" ? "البلد" : "Country"}</th>
+                      <th>{lang === "ar" ? "النوع" : "Type"}</th>
+                      <th>{t("amount")}</th>
+                      <th>{lang === "ar" ? "الرصيد" : "Balance"}</th>
+                      <th>{lang === "ar" ? "الموظف" : "Staff"}</th>
+                      <th>{t("date")}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {customerFunding.rows.data.map((r: any) => (
+                      <tr key={r.id}>
+                        <td className="font-medium">{r.customer_name}</td>
+                        <td className="text-slate-500">{r.customer_location || "—"}</td>
+                        <td>
+                          <span className={`badge ${r.description === "Customer wallet funding" ? "badge-completed" : "badge-inactive"}`}>
+                            {r.description === "Customer wallet funding" ? (lang === "ar" ? "تمويل" : "Fund") : (lang === "ar" ? "مصروف" : "Expense")}
+                          </span>
+                        </td>
+                        <td className={Number(r.amount) > 0 ? "text-emerald-600" : "text-red-600"}>
+                          {r.symbol} {Math.abs(Number(r.amount)).toLocaleString()}
+                        </td>
+                        <td>{r.symbol} {Number(r.customer_balance).toLocaleString()}</td>
+                        <td className="text-slate-500">{r.staff_name || "—"}</td>
+                        <td className="whitespace-nowrap text-xs text-slate-500">{new Date(r.created_at).toLocaleString()}</td>
+                      </tr>
+                    ))}
+                    {customerFunding.rows.data.length === 0 && (
+                      <tr><td colSpan={7} className="text-center text-slate-400 py-8">{lang === "ar" ? "لا توجد سجلات لهذه الفترة." : "No records for this period."}</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          ) : null}
         </div>
       )}
     </AppShell>

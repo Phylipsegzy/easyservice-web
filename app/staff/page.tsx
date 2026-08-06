@@ -138,7 +138,7 @@ export default function StaffPage() {
             <label className="label">Role</label>
             <select value={roleId} onChange={(e) => setRoleId(e.target.value)} required className="input w-full">
               <option value="">Select</option>
-              {roles.map((r) => (
+              {roles.filter((r) => r.name !== "customer").map((r) => (
                 <option key={r.id} value={r.id}>{r.label || r.name}</option>
               ))}
             </select>

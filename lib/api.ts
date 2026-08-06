@@ -226,7 +226,10 @@ export const api = {
   getPaymentReceiptData: (paymentId: number) => request(`/payments/${paymentId}/receipt-data`),
 
   // Special rates
-  getSpecialRates: () => request("/special-rates"),
+  getSpecialRates: (params?: Record<string, string>) => {
+    const qs = params ? `?${new URLSearchParams(params).toString()}` : "";
+    return request(`/special-rates${qs}`);
+  },
   createSpecialRate: (payload: Record<string, any>) =>
     request("/special-rates", { method: "POST", body: JSON.stringify(payload) }),
   deleteSpecialRate: (id: number) => request(`/special-rates/${id}`, { method: "DELETE" }),
@@ -244,6 +247,19 @@ export const api = {
   createStaff: (payload: Record<string, any>) =>
     request("/staff", { method: "POST", body: JSON.stringify(payload) }),
   getStaffFundHistory: () => request("/staff/fund-history"),
+  async exportStaffStatementPdf(userId: number, params?: Record<string, string>): Promise<Blob> {
+    const token = getToken();
+    const qs = params ? `?${new URLSearchParams(params).toString()}` : "";
+    const res = await fetch(`${API_URL}/staff/${userId}/statements-pdf${qs}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!res.ok) throw new Error("Could not generate the statement PDF");
+    return res.blob();
+  },
+  getCustomerFundingReport: (params?: Record<string, string>) => {
+    const qs = params ? `?${new URLSearchParams(params).toString()}` : "";
+    return request(`/reports/customer-funding${qs}`);
+  },
   reverseStaffFund: (id: number) => request(`/staff/fund-history/${id}/reverse`, { method: "POST" }),
   getAccountStats: () => request("/account/stats"),
   updateStaff: (id: number, payload: Record<string, any>) =>
