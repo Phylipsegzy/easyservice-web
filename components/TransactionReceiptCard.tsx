@@ -27,6 +27,11 @@ export default function TransactionReceiptCard({ transaction }: { transaction: a
 
   return (
     <div id="receipt-card" className="bg-white rounded-2xl shadow-lg w-full p-6" style={{ fontFamily: "system-ui, sans-serif" }}>
+      {transaction.paid_via_partner === "nita" && (
+        <div className="bg-amber-500 text-white text-center text-xs font-bold uppercase tracking-wide py-1.5 rounded-lg mb-4">
+          NITA
+        </div>
+      )}
       <div className="flex items-start justify-between border-b border-slate-100 pb-4 mb-4">
         <div>
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-500 to-teal-700 flex items-center justify-center text-white font-bold text-sm mb-2">ES</div>

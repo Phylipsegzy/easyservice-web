@@ -56,6 +56,21 @@ const dict: Record<string, { en: string; ar: string }> = {
   generate_invoice: { en: "Generate invoice", ar: "إنشاء الفاتورة" },
   customer_pays: { en: "Customer pays", ar: "يدفع العميل" },
   recipient_gets: { en: "Recipient gets", ar: "يستلم المستفيد" },
+
+  // Login
+  sign_in_subtitle: { en: "Sign in to your account", ar: "سجّل الدخول إلى حسابك" },
+  username: { en: "Username", ar: "اسم المستخدم" },
+  password: { en: "Password", ar: "كلمة المرور" },
+  logging_in: { en: "Logging in...", ar: "جارٍ تسجيل الدخول..." },
+  log_in: { en: "Log in", ar: "تسجيل الدخول" },
+  tracking_transfer: { en: "Tracking a transfer?", ar: "هل تتابع تحويلاً؟" },
+  check_status: { en: "Check its status", ar: "تحقق من حالته" },
+  login_failed: { en: "Login failed", ar: "فشل تسجيل الدخول" },
+
+  // Dashboard
+  welcome: { en: "Welcome", ar: "مرحباً" },
+  your_wallet_balance: { en: "Your wallet balance", ar: "رصيد محفظتك" },
+  new_transaction: { en: "New Transaction", ar: "معاملة جديدة" },
 };
 
 export function t(key: string, lang: Lang): string {

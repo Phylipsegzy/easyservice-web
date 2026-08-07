@@ -24,6 +24,8 @@ export default function ExpensesPage() {
   const [operation, setOperation] = useState<"multiply" | "divide">("multiply");
   const [vat, setVat] = useState("0");
   const [location, setLocation] = useState("");
+  const [expenseStaffId, setExpenseStaffId] = useState("");
+  const [expenseStaffSearch, setExpenseStaffSearch] = useState("");
 
   // Live preview of the amount, matching the server's own calculation
   const previewAmount = (() => {
@@ -40,6 +42,8 @@ export default function ExpensesPage() {
   const [staff, setStaff] = useState<any[]>([]);
   const [fundHistory, setFundHistory] = useState<any[]>([]);
   const [walletTargetId, setWalletTargetId] = useState("");
+  const [walletStaffSearch, setWalletStaffSearch] = useState("");
+  const [currencies, setCurrencies] = useState<any[]>([]);
   const [walletAmount, setWalletAmount] = useState("");
   const [walletRemark, setWalletRemark] = useState("");
   const [walletSubmitting, setWalletSubmitting] = useState(false);
@@ -64,7 +68,7 @@ export default function ExpensesPage() {
       const adjust = me.user.role === "admin" || me.user.role === "manager";
       setCanAdjust(adjust);
       if (adjust) {
-        const [staffRes, historyRes] = await Promise.all([api.getStaff(), api.getStaffFundHistory()]);
+        const [staffRes, historyRes] = await Promise.all([api.getStaff({ scope: "fund" }), api.getStaffFundHistory()]);
         setStaff(staffRes.staff);
         setFundHistory(historyRes.history.data || historyRes.history);
       }
@@ -76,11 +80,16 @@ export default function ExpensesPage() {
   useEffect(() => {
     load();
     loadWalletSection();
+    api.getCurrencies().then((res) => setCurrencies(res.currencies)).catch(() => {});
   }, []);
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    if (!expenseStaffId) {
+      setError("Select which staff member this expense is for.");
+      return;
+    }
     setSubmitting(true);
     try {
       await api.createExpense({
@@ -90,12 +99,15 @@ export default function ExpensesPage() {
         operation,
         vat: parseFloat(vat) || 0,
         location,
+        staff_id: Number(expenseStaffId),
       });
       setDescription("");
       setUnitPrice("");
       setQty("");
       setVat("0");
       setOperation("multiply");
+      setExpenseStaffId("");
+      setExpenseStaffSearch("");
       load();
     } catch (err: any) {
       setError(err.message);
@@ -115,7 +127,7 @@ export default function ExpensesPage() {
     load();
   }
 
-  async function handleWalletAdjust(e: React.FormEvent) {
+  async function handleFund(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     if (!walletTargetId || !walletAmount) return;
@@ -149,7 +161,7 @@ export default function ExpensesPage() {
   const visibleExpenses = expenses.filter((e) => !search || e.description?.toLowerCase().includes(search.toLowerCase()));
 
   return (
-    <AppShell title="Expenses / Funding" subtitle="Business expenses and staff wallet funding — two separate things">
+    <AppShell title="Expenses / Funding" subtitle="Staff expenses and staff wallet funding — two separate things">
       <a href="/more" className="back-link md:hidden">&larr; More</a>
 
       <div className="flex gap-2 mb-6">
@@ -168,6 +180,50 @@ export default function ExpensesPage() {
       {tab === "expenses" && (
         <>
           <form onSubmit={handleAdd} className="card flex gap-3 flex-wrap items-end mb-6">
+            <div className="relative min-w-[220px]">
+              <label className="label">Staff (required)</label>
+              <input
+                value={expenseStaffSearch}
+                onChange={(e) => {
+                  setExpenseStaffSearch(e.target.value);
+                  setExpenseStaffId("");
+                }}
+                placeholder="Search staff by name or username..."
+                className="input w-full"
+              />
+              {expenseStaffId && (
+                <p className="text-xs text-teal-700 font-medium mt-1">
+                  ✓ {staff.find((s) => String(s.id) === expenseStaffId)?.name}
+                  <button type="button" onClick={() => { setExpenseStaffId(""); setExpenseStaffSearch(""); }} className="text-slate-400 ml-2 underline">
+                    clear
+                  </button>
+                </p>
+              )}
+              {expenseStaffSearch && !expenseStaffId && (
+                <div className="absolute z-10 mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-lg max-h-56 overflow-y-auto">
+                  {staff
+                    .filter((s) =>
+                      s.name.toLowerCase().includes(expenseStaffSearch.toLowerCase()) ||
+                      s.username.toLowerCase().includes(expenseStaffSearch.toLowerCase())
+                    )
+                    .slice(0, 8)
+                    .map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => {
+                          setExpenseStaffId(String(s.id));
+                          setExpenseStaffSearch(`${s.name} (${s.username})`);
+                        }}
+                        className="w-full text-left px-3 py-2 hover:bg-slate-50 text-sm border-b border-slate-50 last:border-0"
+                      >
+                        <span className="font-medium">{s.name}</span>{" "}
+                        <span className="text-slate-400">({s.username})</span>
+                      </button>
+                    ))}
+                </div>
+              )}
+            </div>
             <div className="flex-1 min-w-[180px]">
               <label className="label">Description</label>
               <input value={description} onChange={(e) => setDescription(e.target.value)} required className="input w-full" />
@@ -195,7 +251,7 @@ export default function ExpensesPage() {
               <label className="label">Location</label>
               <input value={location} onChange={(e) => setLocation(e.target.value)} className="input w-32" />
             </div>
-            <button type="submit" disabled={submitting} className="btn">
+            <button type="submit" disabled={submitting || !expenseStaffId} className="btn">
               {submitting ? "Adding..." : "Add"}
             </button>
             {previewAmount !== null && (
@@ -214,6 +270,7 @@ export default function ExpensesPage() {
                 <thead>
                   <tr>
                     <th>Description</th>
+                    <th>Staff</th>
                     <th>Operation</th>
                     <th>Unit price</th>
                     <th>Qty</th>
@@ -226,6 +283,7 @@ export default function ExpensesPage() {
                   {visibleExpenses.map((e) => (
                     <tr key={e.id}>
                       <td>{e.description}</td>
+                      <td className="text-slate-500">{e.staff_name || e.staff?.name || "—"}</td>
                       <td className="text-slate-400 text-xs capitalize">{e.operation || "multiply"}</td>
                       <td>{e.unit_price}</td>
                       <td>{e.qty}</td>
@@ -242,7 +300,7 @@ export default function ExpensesPage() {
                     </tr>
                   ))}
                   {visibleExpenses.length === 0 && (
-                    <tr><td colSpan={7} className="text-center text-slate-400 py-8">No expenses recorded yet.</td></tr>
+                    <tr><td colSpan={8} className="text-center text-slate-400 py-8">No expenses recorded yet.</td></tr>
                   )}
                 </tbody>
               </table>
@@ -254,32 +312,97 @@ export default function ExpensesPage() {
       {tab === "funding" && canAdjust && (
         <>
           <p className="text-xs text-slate-400 mb-3">
-            Direct credit or debit to a staff member's own wallet — logged to their statement, no receipt.
-            {myRole === "manager" && " Limited to staff in your own country."}
+            Direct credit to a staff member's own wallet — logged to their statement, no receipt.
+            {myRole === "manager" && " Limited to staff in your own country, or yourself."}
             {myRole === "admin" && " Only admin can reverse an entry."}
           </p>
-          <form onSubmit={handleWalletAdjust} className="card flex gap-3 flex-wrap items-end mb-6">
-            <div>
-              <label className="label">Staff member</label>
-              <select value={walletTargetId} onChange={(e) => setWalletTargetId(e.target.value)} required className="input">
-                <option value="">Select staff...</option>
-                {staff.map((s) => (
-                  <option key={s.id} value={s.id}>{s.name} ({s.username})</option>
-                ))}
-              </select>
+
+          <div className="card mb-6">
+            <label className="label">Search staff by name or username</label>
+            <div className="relative">
+              <input
+                value={walletStaffSearch}
+                onChange={(e) => {
+                  setWalletStaffSearch(e.target.value);
+                  setWalletTargetId("");
+                }}
+                placeholder="Start typing a name or username..."
+                className="input w-full max-w-sm"
+              />
+              {walletStaffSearch && !walletTargetId && (
+                <div className="absolute z-10 mt-1 w-full max-w-sm bg-white border border-slate-200 rounded-xl shadow-lg max-h-56 overflow-y-auto">
+                  {staff
+                    .filter((s) =>
+                      s.name.toLowerCase().includes(walletStaffSearch.toLowerCase()) ||
+                      s.username.toLowerCase().includes(walletStaffSearch.toLowerCase())
+                    )
+                    .slice(0, 8)
+                    .map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => {
+                          setWalletTargetId(String(s.id));
+                          setWalletStaffSearch(`${s.name} (${s.username})`);
+                        }}
+                        className="w-full text-left px-3 py-2 hover:bg-slate-50 text-sm border-b border-slate-50 last:border-0"
+                      >
+                        <span className="font-medium">{s.name}</span>{" "}
+                        <span className="text-slate-400">({s.username})</span>
+                        {s.location && <span className="text-slate-400"> · {s.location}</span>}
+                      </button>
+                    ))}
+                  {staff.filter((s) =>
+                    s.name.toLowerCase().includes(walletStaffSearch.toLowerCase()) ||
+                    s.username.toLowerCase().includes(walletStaffSearch.toLowerCase())
+                  ).length === 0 && (
+                    <p className="px-3 py-2 text-sm text-slate-400">No match found.</p>
+                  )}
+                </div>
+              )}
             </div>
-            <div>
-              <label className="label">Amount</label>
-              <MoneyInput value={walletAmount} onChange={setWalletAmount} className="input w-32" required />
-            </div>
-            <div>
-              <label className="label">Remark</label>
-              <input value={walletRemark} onChange={(e) => setWalletRemark(e.target.value)} className="input" />
-            </div>
-            <button type="submit" disabled={walletSubmitting} className="btn-outline">
-              {walletSubmitting ? "Saving..." : "Apply"}
-            </button>
-          </form>
+          </div>
+
+          {walletTargetId && (() => {
+            const selectedStaff = staff.find((s) => String(s.id) === walletTargetId);
+            const staffCurrency = currencies.find((c) => c.country?.toLowerCase() === selectedStaff?.location?.toLowerCase());
+            return (
+              <>
+                <div className="card mb-4 flex items-center justify-between">
+                  <div>
+                    <p className="font-semibold text-slate-900">{selectedStaff?.name}</p>
+                    <p className="text-xs text-slate-400">{selectedStaff?.username} · {selectedStaff?.location || "—"} · {selectedStaff?.role?.label || selectedStaff?.role?.name || "—"}</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <p className="text-[11px] uppercase tracking-wide text-slate-400">Current balance</p>
+                      <p className="font-bold text-teal-700">
+                        {staffCurrency?.symbol || ""} {Number(selectedStaff?.wallet || 0).toLocaleString()} {staffCurrency?.currency_code || ""}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setWalletTargetId(""); setWalletStaffSearch(""); }}
+                      className="btn-ghost"
+                    >
+                      Change staff
+                    </button>
+                  </div>
+                </div>
+
+                <div className="max-w-sm mb-6">
+                  <h3 className="text-sm font-semibold mb-2">Fund wallet</h3>
+                  <form onSubmit={handleFund} className="card flex flex-col gap-3">
+                    <MoneyInput value={walletAmount} onChange={setWalletAmount} placeholder="Amount" className="input" required />
+                    <input value={walletRemark} onChange={(e) => setWalletRemark(e.target.value)} placeholder="Remark (optional)" className="input" />
+                    <button type="submit" disabled={walletSubmitting} className="btn self-start">
+                      {walletSubmitting ? "Saving..." : "Fund wallet"}
+                    </button>
+                  </form>
+                </div>
+              </>
+            );
+          })()}
 
           <div className="table-wrap">
             <table>

@@ -59,6 +59,7 @@ const desktopNavItems: NavItem[] = [
   { href: "/cash-movement", label: "Cash Movement", key: "cash_movement", icon: Wallet, adminOnly: true },
   { href: "/refunds", label: "Refunds", key: "refunds", icon: RotateCcw, hiddenForRoles: ["personnel", "personnel2", "cashier"] },
   { href: "/customers", label: "Customers", key: "customers", icon: Users, hiddenForRoles: ["personnel", "personnel2"] },
+  { href: "/customer-funding", label: "Customer Funding/Expense", key: "customer_funding", icon: Wallet, hiddenForRoles: ["personnel", "personnel2"] },
   { href: "/currencies", label: "Currencies", key: "currencies", icon: Coins, hiddenForRoles: ["personnel", "personnel2", "cashier"] },
   { href: "/currency-groups", label: "Currency Corridors", key: "currency_corridors", icon: Shuffle, hiddenForRoles: ["personnel", "personnel2", "cashier"] },
   { href: "/special-rates", label: "Special Rates", key: "special_rates", icon: Percent, adminOnly: true },

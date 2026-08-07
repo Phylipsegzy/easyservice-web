@@ -2,8 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import Link from "next/link";
 import { api } from "@/lib/api";
+import AppShell from "@/components/AppShell";
 import ReceiptActions from "@/components/ReceiptActions";
+import { Home } from "lucide-react";
 
 export default function PaymentReceiptPage() {
   const params = useParams();
@@ -24,13 +27,31 @@ export default function PaymentReceiptPage() {
       .catch((err) => setError(err.message));
   }, [id]);
 
-  if (error) return <div className="min-h-screen flex items-center justify-center text-red-600 text-sm">{error}</div>;
-  if (!payment) return <div className="min-h-screen flex items-center justify-center text-slate-400 text-sm">Loading...</div>;
+  if (error) {
+    return (
+      <AppShell title="Receipt">
+        <div className="flex flex-col items-center gap-3 py-16">
+          <p className="text-red-600 text-sm">{error}</p>
+          <Link href="/dashboard" className="btn-outline no-underline flex items-center gap-1.5">
+            <Home size={15} /> Back to Dashboard
+          </Link>
+        </div>
+      </AppShell>
+    );
+  }
+  if (!payment) {
+    return (
+      <AppShell title="Receipt">
+        <p className="text-slate-400 text-sm">Loading...</p>
+      </AppShell>
+    );
+  }
 
   const amount = Math.abs(Number(payment.amount));
 
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col items-center py-10 px-4 gap-5">
+    <AppShell title="Receipt" subtitle={`#${payment.id}`}>
+      <div className="flex flex-col items-center py-4 px-4 gap-5">
       <div id="receipt-card" className="bg-white rounded-2xl shadow-lg w-full max-w-md p-6" style={{ fontFamily: "system-ui, sans-serif" }}>
         <div className="flex items-start justify-between border-b border-slate-100 pb-4 mb-4">
           <div>
@@ -99,6 +120,10 @@ export default function PaymentReceiptPage() {
           shareTitle={`Receipt #${payment.id}`}
         />
       </div>
-    </div>
+      <Link href="/dashboard" className="btn-outline no-underline flex items-center gap-1.5">
+        <Home size={15} /> Back to Dashboard
+      </Link>
+      </div>
+    </AppShell>
   );
 }

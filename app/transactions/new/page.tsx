@@ -50,6 +50,8 @@ export default function NewTransactionPage() {
   const [receivingCountryId, setReceivingCountryId] = useState("");
   const [rate, setRate] = useState("");
   const [specialRates, setSpecialRates] = useState<any[]>([]);
+  const [customerWallets, setCustomerWallets] = useState<any[]>([]);
+  const [paidViaNita, setPaidViaNita] = useState(false);
   const [usingSpecialRateId, setUsingSpecialRateId] = useState<number | null>(null);
 
   // --- Amount (bidirectional) ---
@@ -90,8 +92,10 @@ export default function NewTransactionPage() {
     setUsingSpecialRateId(null);
     if (customer?.id) {
       api.getSpecialRates({ customer_id: String(customer.id) }).then((res) => setSpecialRates(res.special_rates)).catch(() => setSpecialRates([]));
+      api.getCustomer(customer.id).then((res) => setCustomerWallets(res.customer.wallets || [])).catch(() => setCustomerWallets([]));
     } else {
       setSpecialRates([]);
+      setCustomerWallets([]);
     }
   }, [customer]);
 
@@ -109,6 +113,7 @@ export default function NewTransactionPage() {
     const match = corridors.find((c) => String(c.country2_id) === receivingCountryId);
     setRate(match ? String(match.rate) : "");
     setUsingSpecialRateId(null);
+    setPaidViaNita(false);
   }, [receivingCountryId, corridors]);
 
   useEffect(() => {
@@ -194,6 +199,7 @@ export default function NewTransactionPage() {
   const sendingCountry = currencies.find((c) => String(c.id) === sendingCountryId);
   const receivingCountry = currencies.find((c) => String(c.id) === receivingCountryId);
   const isChadDestination = !!receivingCountry?.country?.toLowerCase().includes("chad");
+  const isXofDestination = receivingCountry?.currency_code === "XOF";
 
   const stepValid = useMemo(() => {
     if (step === 1) return !!customer;
@@ -227,6 +233,7 @@ export default function NewTransactionPage() {
         notes: notes || undefined,
         chad_region: isChadDestination ? chadRegion : undefined,
         owner_id: isAdmin && ownerId ? Number(ownerId) : undefined,
+        paid_via_partner: isXofDestination && paidViaNita ? "nita" : undefined,
       };
       if (lastEdited === "send") payload.amount = parseFloat(sendAmount);
       else payload.subtotal = parseFloat(receiveAmount);
@@ -279,6 +286,19 @@ export default function NewTransactionPage() {
               onSelect={(c) => (c ? selectCustomer(c) : setCustomer(null))}
               onCreateNew={startCreateCustomer}
             />
+
+            {customer && customerWallets.length > 0 && (
+              <div className="flex gap-3 flex-wrap">
+                {customerWallets.map((w: any) => (
+                  <div key={w.currency_id} className="stat-card">
+                    <div className="stat-label">{w.currency?.country} balance</div>
+                    <div className="stat-value">
+                      {w.currency?.symbol} {Number(w.balance).toLocaleString()} {w.currency?.currency_code}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {!customer && recentCustomers.length > 0 && (
               <div>
@@ -449,6 +469,25 @@ export default function NewTransactionPage() {
                 {chadRegions.length === 0 && (
                   <p className="text-xs text-amber-600 mt-1">No pickup regions set up yet — add one under Chad Pickup Regions.</p>
                 )}
+              </div>
+            )}
+            {isXofDestination && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={paidViaNita}
+                    onChange={(e) => setPaidViaNita(e.target.checked)}
+                    className="mt-0.5"
+                  />
+                  <span className="text-sm">
+                    <strong className="text-amber-900">Paid out by Nita</strong>
+                    <span className="block text-xs text-amber-700 mt-0.5">
+                      Nita holds money on our behalf and will pay the receiver directly — this
+                      debits our Nita balance for the full receiving amount instead of us paying it ourselves.
+                    </span>
+                  </span>
+                </label>
               </div>
             )}
           </div>

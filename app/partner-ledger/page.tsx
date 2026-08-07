@@ -5,12 +5,12 @@ import { api } from "@/lib/api";
 import AppShell from "@/components/AppShell";
 import SearchInput from "@/components/SearchInput";
 import { useLanguage } from "@/lib/i18n";
+import * as XLSX from "xlsx";
+import { FileSpreadsheet, FileText } from "lucide-react";
 
-type Partner = "nita" | "aliza" | "sacko";
+type Partner = "nita";
 const PARTNERS: { key: Partner; label: string }[] = [
   { key: "nita", label: "Nita" },
-  { key: "aliza", label: "Aliza" },
-  { key: "sacko", label: "Sacko" },
 ];
 
 export default function PartnerLedgerPage() {
@@ -28,6 +28,79 @@ export default function PartnerLedgerPage() {
   const [entryDescription, setEntryDescription] = useState("");
   const [entryRemarks, setEntryRemarks] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [downloadingReceiptId, setDownloadingReceiptId] = useState<number | null>(null);
+  const [exporting, setExporting] = useState<"excel" | "pdf" | null>(null);
+
+  function handleExportExcel() {
+    if (!data) return;
+    setExporting("excel");
+    try {
+      const exportRows = (data.entries?.data || data.entries || []).map((r: any) => ({
+        Description: r.description,
+        Remarks: r.remarks || "",
+        Credit: r.credit,
+        Debit: r.debit,
+        Balance: r.balance,
+        Date: new Date(r.created_at).toLocaleString(),
+      }));
+      const ws = XLSX.utils.json_to_sheet(exportRows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, partner);
+      XLSX.writeFile(wb, `${partner}-ledger.xlsx`);
+    } finally {
+      setExporting(null);
+    }
+  }
+
+  async function handleExportPdf() {
+    setExporting("pdf");
+    try {
+      const params: Record<string, string> = {};
+      if (from) params.from = from;
+      if (to) params.to = to;
+      const token = localStorage.getItem("easyservice_token");
+      const qs = new URLSearchParams(params).toString();
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+      const res = await fetch(`${apiUrl}/partner-ledger/${partner}/export-pdf?${qs}`, {
+        headers: { Authorization: token ? `Bearer ${token}` : "", "ngrok-skip-browser-warning": "true" },
+      });
+      if (!res.ok) throw new Error("Could not generate the ledger PDF");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${partner}-ledger.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setExporting(null);
+    }
+  }
+
+  async function handleDownloadEntryReceipt(entryId: number) {
+    setDownloadingReceiptId(entryId);
+    try {
+      const token = localStorage.getItem("easyservice_token");
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+      const res = await fetch(`${apiUrl}/partner-ledger/${partner}/${entryId}/receipt`, {
+        headers: { Authorization: token ? `Bearer ${token}` : "", "ngrok-skip-browser-warning": "true" },
+      });
+      if (!res.ok) throw new Error("Could not generate the receipt");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${partner}-receipt-${entryId}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setDownloadingReceiptId(null);
+    }
+  }
 
   async function load() {
     setLoading(true);
@@ -102,6 +175,12 @@ export default function PartnerLedgerPage() {
           <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="input" />
         </div>
         <button onClick={load} className="btn">{lang === "ar" ? "تطبيق" : "Apply"}</button>
+        <button onClick={handleExportExcel} disabled={exporting !== null || !data} className="btn-outline flex items-center gap-1.5">
+          <FileSpreadsheet size={15} /> {lang === "ar" ? "تصدير Excel" : "Export Excel"}
+        </button>
+        <button onClick={handleExportPdf} disabled={exporting !== null} className="btn-outline flex items-center gap-1.5">
+          <FileText size={15} /> {exporting === "pdf" ? "..." : lang === "ar" ? "تصدير PDF" : "Export PDF"}
+        </button>
       </div>
 
       {error && <p className="text-red-600 text-sm mb-4">{error}</p>}
@@ -153,6 +232,7 @@ export default function PartnerLedgerPage() {
                   <th>{lang === "ar" ? "دائن" : "Credit"}</th>
                   <th>{lang === "ar" ? "مدين" : "Debit"}</th>
                   <th>{lang === "ar" ? "الرصيد" : "Balance"}</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
@@ -164,10 +244,15 @@ export default function PartnerLedgerPage() {
                     <td className="text-emerald-600">{Number(r.credit) ? Number(r.credit).toLocaleString() : "—"}</td>
                     <td className="text-red-600">{Number(r.debit) ? Number(r.debit).toLocaleString() : "—"}</td>
                     <td className="font-semibold">{Number(r.balance).toLocaleString()}</td>
+                    <td>
+                      <button onClick={() => handleDownloadEntryReceipt(r.id)} disabled={downloadingReceiptId === r.id} className="btn-ghost">
+                        {downloadingReceiptId === r.id ? "..." : lang === "ar" ? "إيصال" : "Receipt"}
+                      </button>
+                    </td>
                   </tr>
                 ))}
                 {rows.length === 0 && (
-                  <tr><td colSpan={6} className="text-center text-slate-400 py-8">{lang === "ar" ? "لا توجد قيود لهذه الفترة." : "No ledger entries for this period."}</td></tr>
+                  <tr><td colSpan={7} className="text-center text-slate-400 py-8">{lang === "ar" ? "لا توجد قيود لهذه الفترة." : "No ledger entries for this period."}</td></tr>
                 )}
               </tbody>
             </table>

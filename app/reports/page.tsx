@@ -186,6 +186,16 @@ export default function ReportsPage() {
     }
   }
 
+  // Live search — fires automatically 400ms after typing stops, once there
+  // are at least 3 characters (or immediately when cleared back to empty).
+  useEffect(() => {
+    if (tab !== "customer_funding") return;
+    if (customerFundingSearch.length > 0 && customerFundingSearch.length < 3) return;
+    const timer = setTimeout(() => loadCustomerFunding(), 400);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customerFundingSearch]);
+
   function handleExportCustomerFundingExcel() {
     if (!customerFunding) return;
     setExporting("excel");
@@ -262,6 +272,14 @@ export default function ReportsPage() {
       setStaffFundingLoading(false);
     }
   }
+
+  useEffect(() => {
+    if (tab !== "staff_funding") return;
+    if (staffFundingSearch.length > 0 && staffFundingSearch.length < 3) return;
+    const timer = setTimeout(() => loadStaffFunding(), 400);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [staffFundingSearch]);
 
   function handleExportStaffFundingExcel() {
     if (!staffFunding) return;
@@ -852,6 +870,7 @@ export default function ReportsPage() {
               <input
                 value={customerFundingSearch}
                 onChange={(e) => setCustomerFundingSearch(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && loadCustomerFunding()}
                 placeholder={lang === "ar" ? "اسم العميل أو رقم الهاتف..." : "Customer name or phone..."}
                 className="input w-56"
               />
@@ -946,6 +965,7 @@ export default function ReportsPage() {
               <input
                 value={staffFundingSearch}
                 onChange={(e) => setStaffFundingSearch(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && loadStaffFunding()}
                 placeholder={lang === "ar" ? "اسم الموظف أو اسم المستخدم..." : "Staff name or username..."}
                 className="input w-56"
               />

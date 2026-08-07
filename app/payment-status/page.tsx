@@ -110,6 +110,7 @@ export default function PaymentStatusPage() {
                 <th>{lang === "ar" ? "الممر" : "Corridor"}</th>
                 <th>{lang === "ar" ? "الإجمالي (يستلمه المستفيد)" : "Total (receiver gets)"}</th>
                 <th>{lang === "ar" ? "الرصيد المستحق" : "Balance owed"}</th>
+                <th>{lang === "ar" ? "ملاحظات" : "Notes"}</th>
                 <th>{lang === "ar" ? "حالة الدفع" : "Payout status"}</th>
                 <th></th>
               </tr>
@@ -124,6 +125,7 @@ export default function PaymentStatusPage() {
                   <td className={Number(tx.balance) > 0 ? "font-semibold text-amber-700" : "text-slate-400"}>
                     {Number(tx.balance).toLocaleString()}
                   </td>
+                  <td className="text-slate-500 text-xs max-w-[220px] whitespace-normal break-words">{tx.notes || "—"}</td>
                   <td><span className={`badge badge-${tx.payment_status2?.replace(" ", "-") || tx.payment_status?.replace(" ", "-")}`}>{tx.payment_status2 || tx.payment_status}</span></td>
                   <td>
                     <div className="flex gap-2 items-center flex-wrap">
