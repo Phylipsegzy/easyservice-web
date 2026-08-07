@@ -40,7 +40,6 @@ export default function ExpensesPage() {
   const [staff, setStaff] = useState<any[]>([]);
   const [fundHistory, setFundHistory] = useState<any[]>([]);
   const [walletTargetId, setWalletTargetId] = useState("");
-  const [walletAction, setWalletAction] = useState<"fund" | "expense">("fund");
   const [walletAmount, setWalletAmount] = useState("");
   const [walletRemark, setWalletRemark] = useState("");
   const [walletSubmitting, setWalletSubmitting] = useState(false);
@@ -122,7 +121,7 @@ export default function ExpensesPage() {
     if (!walletTargetId || !walletAmount) return;
     setWalletSubmitting(true);
     try {
-      const signedAmount = walletAction === "fund" ? parseFloat(walletAmount) : -parseFloat(walletAmount);
+      const signedAmount = parseFloat(walletAmount);
       await api.fundStaffWallet(Number(walletTargetId), { amount: signedAmount, remark: walletRemark || undefined });
       setWalletAmount("");
       setWalletRemark("");
@@ -268,22 +267,6 @@ export default function ExpensesPage() {
                   <option key={s.id} value={s.id}>{s.name} ({s.username})</option>
                 ))}
               </select>
-            </div>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setWalletAction("fund")}
-                className={walletAction === "fund" ? "btn" : "btn-ghost"}
-              >
-                Fund (credit)
-              </button>
-              <button
-                type="button"
-                onClick={() => setWalletAction("expense")}
-                className={walletAction === "expense" ? "btn" : "btn-ghost"}
-              >
-                Expense (debit)
-              </button>
             </div>
             <div>
               <label className="label">Amount</label>

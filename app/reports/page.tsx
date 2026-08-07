@@ -7,7 +7,7 @@ import AppShell from "@/components/AppShell";
 import { useLanguage } from "@/lib/i18n";
 import { FileSpreadsheet, FileText, Search } from "lucide-react";
 
-type Tab = "summary" | "country" | "transfers" | "customer" | "staff_statement" | "customer_funding";
+type Tab = "summary" | "country" | "transfers" | "customer" | "staff_statement" | "customer_funding" | "staff_funding";
 
 export default function ReportsPage() {
   const { t, lang } = useLanguage();
@@ -58,7 +58,7 @@ export default function ReportsPage() {
   }
 
   useEffect(() => {
-    if (tab !== "customer" && tab !== "staff_statement" && tab !== "customer_funding") load(tab);
+    if (tab !== "customer" && tab !== "staff_statement" && tab !== "customer_funding" && tab !== "staff_funding") load(tab);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab]);
 
@@ -163,6 +163,7 @@ export default function ReportsPage() {
 
   // Customer Funding/Expense tab
   const [fundingType, setFundingType] = useState<"all" | "fund" | "expense">("all");
+  const [customerFundingSearch, setCustomerFundingSearch] = useState("");
   const [customerFunding, setCustomerFunding] = useState<any>(null);
   const [customerFundingLoading, setCustomerFundingLoading] = useState(false);
   const [customerFundingError, setCustomerFundingError] = useState("");
@@ -174,6 +175,7 @@ export default function ReportsPage() {
       const params: Record<string, string> = { type: fundingType };
       if (from) params.from = from;
       if (to) params.to = to;
+      if (customerFundingSearch) params.customer_search = customerFundingSearch;
       const res = await api.getCustomerFundingReport(params);
       setCustomerFunding(res);
     } catch (err: any) {
@@ -208,8 +210,113 @@ export default function ReportsPage() {
     }
   }
 
+  async function handleExportCustomerFundingPdf() {
+    setExporting("pdf");
+    try {
+      const params: Record<string, string> = { type: fundingType };
+      if (from) params.from = from;
+      if (to) params.to = to;
+      if (customerFundingSearch) params.customer_search = customerFundingSearch;
+      const token = localStorage.getItem("easyservice_token");
+      const qs = new URLSearchParams(params).toString();
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+      const res = await fetch(`${apiUrl}/reports/customer-funding-pdf?${qs}`, {
+        headers: { Authorization: token ? `Bearer ${token}` : "", "ngrok-skip-browser-warning": "true" },
+      });
+      if (!res.ok) throw new Error("Could not generate the report PDF");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `customer-funding-${fundingType}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      setCustomerFundingError(err.message);
+    } finally {
+      setExporting(null);
+    }
+  }
+
+  // Staff Funding/Expense tab
+  const [staffFundingType, setStaffFundingType] = useState<"all" | "fund" | "expense">("all");
+  const [staffFundingSearch, setStaffFundingSearch] = useState("");
+  const [staffFunding, setStaffFunding] = useState<any>(null);
+  const [staffFundingLoading, setStaffFundingLoading] = useState(false);
+  const [staffFundingError, setStaffFundingError] = useState("");
+
+  async function loadStaffFunding() {
+    setStaffFundingLoading(true);
+    setStaffFundingError("");
+    try {
+      const params: Record<string, string> = { type: staffFundingType };
+      if (from) params.from = from;
+      if (to) params.to = to;
+      if (staffFundingSearch) params.staff_search = staffFundingSearch;
+      const res = await api.getStaffFundingReport(params);
+      setStaffFunding(res);
+    } catch (err: any) {
+      setStaffFundingError(err.message);
+      setStaffFunding(null);
+    } finally {
+      setStaffFundingLoading(false);
+    }
+  }
+
+  function handleExportStaffFundingExcel() {
+    if (!staffFunding) return;
+    setExporting("excel");
+    try {
+      const rows = staffFunding.rows.data.map((r: any) => ({
+        Staff: r.staff_name,
+        Country: r.staff_location,
+        Type: r.amount > 0 ? "Fund" : "Expense",
+        Amount: Math.abs(r.amount),
+        By: r.created_by_name,
+        Remark: r.remark || "",
+        Status: r.reversed_at ? "Reversed" : "Active",
+        Date: new Date(r.created_at).toLocaleString(),
+      }));
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Staff Funding");
+      XLSX.writeFile(wb, `staff-funding-${staffFundingType}.xlsx`);
+    } finally {
+      setExporting(null);
+    }
+  }
+
+  async function handleExportStaffFundingPdf() {
+    setExporting("pdf");
+    try {
+      const params: Record<string, string> = { type: staffFundingType };
+      if (from) params.from = from;
+      if (to) params.to = to;
+      if (staffFundingSearch) params.staff_search = staffFundingSearch;
+      const token = localStorage.getItem("easyservice_token");
+      const qs = new URLSearchParams(params).toString();
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+      const res = await fetch(`${apiUrl}/reports/staff-funding-pdf?${qs}`, {
+        headers: { Authorization: token ? `Bearer ${token}` : "", "ngrok-skip-browser-warning": "true" },
+      });
+      if (!res.ok) throw new Error("Could not generate the report PDF");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `staff-funding-${staffFundingType}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      setStaffFundingError(err.message);
+    } finally {
+      setExporting(null);
+    }
+  }
+
   useEffect(() => {
     if (tab === "customer_funding") loadCustomerFunding();
+    if (tab === "staff_funding") loadStaffFunding();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab]);
 
@@ -349,19 +456,20 @@ export default function ReportsPage() {
     customer: lang === "ar" ? "تقرير العميل" : "Customer Report",
     staff_statement: lang === "ar" ? "كشف حساب الموظف" : "Staff Statement",
     customer_funding: lang === "ar" ? "تمويل/مصروفات العملاء" : "Customer Funding/Expense",
+    staff_funding: lang === "ar" ? "تمويل/مصروفات الموظفين" : "Staff Funding/Expense",
   };
 
   return (
     <AppShell title={lang === "ar" ? "التقارير" : "Reports"} subtitle={lang === "ar" ? "نظرة عامة على أداء الأعمال" : "Business performance overview"}>
       <div className="flex gap-2 mb-5 flex-wrap items-center justify-between">
         <div className="flex gap-2 flex-wrap">
-          {(["summary", "country", "transfers", "customer", "staff_statement", "customer_funding"] as Tab[]).map((tb) => (
+          {(["summary", "country", "transfers", "customer", "staff_statement", "customer_funding", "staff_funding"] as Tab[]).map((tb) => (
             <button key={tb} onClick={() => setTab(tb)} className={tab === tb ? "btn" : "btn-ghost"}>
               {tabLabel[tb]}
             </button>
           ))}
         </div>
-        {tab !== "customer" && tab !== "staff_statement" && tab !== "customer_funding" && (
+        {tab !== "customer" && tab !== "staff_statement" && tab !== "customer_funding" && tab !== "staff_funding" && (
           <div className="flex gap-2">
             <button onClick={handleExportExcel} disabled={exporting !== null} className="btn-outline flex items-center gap-1.5">
               <FileSpreadsheet size={15} /> {lang === "ar" ? "تصدير Excel" : "Export Excel"}
@@ -373,7 +481,7 @@ export default function ReportsPage() {
         )}
       </div>
 
-      {tab !== "country" && tab !== "customer" && tab !== "staff_statement" && tab !== "customer_funding" && (
+      {tab !== "country" && tab !== "customer" && tab !== "staff_statement" && tab !== "customer_funding" && tab !== "staff_funding" && (
         <div className="flex gap-2 mb-6 items-end flex-wrap">
           <div>
             <label className="label">{lang === "ar" ? "من" : "From"}</label>
@@ -740,6 +848,15 @@ export default function ReportsPage() {
         <div>
           <div className="flex gap-2 mb-6 items-end flex-wrap">
             <div>
+              <label className="label">{lang === "ar" ? "بحث بالاسم أو الهاتف" : "Search name or phone"}</label>
+              <input
+                value={customerFundingSearch}
+                onChange={(e) => setCustomerFundingSearch(e.target.value)}
+                placeholder={lang === "ar" ? "اسم العميل أو رقم الهاتف..." : "Customer name or phone..."}
+                className="input w-56"
+              />
+            </div>
+            <div>
               <label className="label">{lang === "ar" ? "النوع" : "Type"}</label>
               <select value={fundingType} onChange={(e) => setFundingType(e.target.value as "all" | "fund" | "expense")} className="input">
                 <option value="all">{lang === "ar" ? "الكل" : "All"}</option>
@@ -758,6 +875,9 @@ export default function ReportsPage() {
             <button onClick={loadCustomerFunding} className="btn">{lang === "ar" ? "تطبيق" : "Apply"}</button>
             <button onClick={handleExportCustomerFundingExcel} disabled={exporting !== null || !customerFunding} className="btn-outline flex items-center gap-1.5">
               <FileSpreadsheet size={15} /> {lang === "ar" ? "تصدير Excel" : "Export Excel"}
+            </button>
+            <button onClick={handleExportCustomerFundingPdf} disabled={exporting !== null} className="btn-outline flex items-center gap-1.5">
+              <FileText size={15} /> {exporting === "pdf" ? "..." : lang === "ar" ? "تصدير PDF" : "Export PDF"}
             </button>
           </div>
 
@@ -808,6 +928,106 @@ export default function ReportsPage() {
                       </tr>
                     ))}
                     {customerFunding.rows.data.length === 0 && (
+                      <tr><td colSpan={7} className="text-center text-slate-400 py-8">{lang === "ar" ? "لا توجد سجلات لهذه الفترة." : "No records for this period."}</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          ) : null}
+        </div>
+      )}
+
+      {tab === "staff_funding" && (
+        <div>
+          <div className="flex gap-2 mb-6 items-end flex-wrap">
+            <div>
+              <label className="label">{lang === "ar" ? "بحث بالاسم" : "Search staff"}</label>
+              <input
+                value={staffFundingSearch}
+                onChange={(e) => setStaffFundingSearch(e.target.value)}
+                placeholder={lang === "ar" ? "اسم الموظف أو اسم المستخدم..." : "Staff name or username..."}
+                className="input w-56"
+              />
+            </div>
+            <div>
+              <label className="label">{lang === "ar" ? "النوع" : "Type"}</label>
+              <select value={staffFundingType} onChange={(e) => setStaffFundingType(e.target.value as "all" | "fund" | "expense")} className="input">
+                <option value="all">{lang === "ar" ? "الكل" : "All"}</option>
+                <option value="fund">{lang === "ar" ? "تمويل فقط" : "Funding only"}</option>
+                <option value="expense">{lang === "ar" ? "مصروفات فقط" : "Expense only"}</option>
+              </select>
+            </div>
+            <div>
+              <label className="label">{lang === "ar" ? "من" : "From"}</label>
+              <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="input" />
+            </div>
+            <div>
+              <label className="label">{lang === "ar" ? "إلى" : "To"}</label>
+              <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="input" />
+            </div>
+            <button onClick={loadStaffFunding} className="btn">{lang === "ar" ? "تطبيق" : "Apply"}</button>
+            <button onClick={handleExportStaffFundingExcel} disabled={exporting !== null || !staffFunding} className="btn-outline flex items-center gap-1.5">
+              <FileSpreadsheet size={15} /> {lang === "ar" ? "تصدير Excel" : "Export Excel"}
+            </button>
+            <button onClick={handleExportStaffFundingPdf} disabled={exporting !== null} className="btn-outline flex items-center gap-1.5">
+              <FileText size={15} /> {exporting === "pdf" ? "..." : lang === "ar" ? "تصدير PDF" : "Export PDF"}
+            </button>
+          </div>
+
+          {myProfile && myProfile.role !== "admin" && (
+            <p className="text-xs text-slate-400 mb-4">
+              {lang === "ar" ? "يظهر فقط موظفو بلدك." : "Only showing staff in your own country."}
+            </p>
+          )}
+
+          {staffFundingError && <p className="text-red-600 text-sm mb-4">{staffFundingError}</p>}
+          {staffFundingLoading ? (
+            <p className="text-slate-400 text-sm">{t("loading")}</p>
+          ) : staffFunding ? (
+            <>
+              <div className="flex gap-3 mb-6 flex-wrap">
+                {card(lang === "ar" ? "إجمالي التمويل" : "Total funded", Number(staffFunding.totals.total_funded).toLocaleString())}
+                {card(lang === "ar" ? "إجمالي المصروفات" : "Total expensed", Number(staffFunding.totals.total_expensed).toLocaleString())}
+              </div>
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>{lang === "ar" ? "الموظف" : "Staff"}</th>
+                      <th>{lang === "ar" ? "البلد" : "Country"}</th>
+                      <th>{lang === "ar" ? "النوع" : "Type"}</th>
+                      <th>{t("amount")}</th>
+                      <th>{lang === "ar" ? "بواسطة" : "By"}</th>
+                      <th>{lang === "ar" ? "الحالة" : "Status"}</th>
+                      <th>{t("date")}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {staffFunding.rows.data.map((r: any) => (
+                      <tr key={r.id}>
+                        <td className="font-medium">{r.staff_name}</td>
+                        <td className="text-slate-500">{r.staff_location || "—"}</td>
+                        <td>
+                          <span className={`badge ${Number(r.amount) > 0 ? "badge-completed" : "badge-inactive"}`}>
+                            {Number(r.amount) > 0 ? (lang === "ar" ? "تمويل" : "Fund") : (lang === "ar" ? "مصروف" : "Expense")}
+                          </span>
+                        </td>
+                        <td className={Number(r.amount) > 0 ? "text-emerald-600" : "text-red-600"}>
+                          {Math.abs(Number(r.amount)).toLocaleString()}
+                        </td>
+                        <td className="text-slate-500">{r.created_by_name || "—"}</td>
+                        <td>
+                          {r.reversed_at ? (
+                            <span className="badge badge-inactive">{lang === "ar" ? "ملغى" : "Reversed"}</span>
+                          ) : (
+                            <span className="badge badge-active">{lang === "ar" ? "نشط" : "Active"}</span>
+                          )}
+                        </td>
+                        <td className="whitespace-nowrap text-xs text-slate-500">{new Date(r.created_at).toLocaleString()}</td>
+                      </tr>
+                    ))}
+                    {staffFunding.rows.data.length === 0 && (
                       <tr><td colSpan={7} className="text-center text-slate-400 py-8">{lang === "ar" ? "لا توجد سجلات لهذه الفترة." : "No records for this period."}</td></tr>
                     )}
                   </tbody>

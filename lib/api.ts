@@ -285,6 +285,10 @@ export const api = {
     const qs = params ? `?${new URLSearchParams(params).toString()}` : "";
     return request(`/reports/customer-funding${qs}`);
   },
+  getStaffFundingReport: (params?: Record<string, string>) => {
+    const qs = params ? `?${new URLSearchParams(params).toString()}` : "";
+    return request(`/reports/staff-funding${qs}`);
+  },
   reverseStaffFund: (id: number) => request(`/staff/fund-history/${id}/reverse`, { method: "POST" }),
   getAccountStats: () => request("/account/stats"),
   updateStaff: (id: number, payload: Record<string, any>) =>
