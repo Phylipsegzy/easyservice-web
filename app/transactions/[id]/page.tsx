@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { api } from "@/lib/api";
 import AppShell from "@/components/AppShell";
+import VoiceRecorder from "@/components/VoiceRecorder";
 import { Download } from "lucide-react";
 
 export default function TransactionDetailPage() {
@@ -18,10 +19,11 @@ export default function TransactionDetailPage() {
   const [error, setError] = useState("");
   const [completing, setCompleting] = useState(false);
 
-  const [evidenceType, setEvidenceType] = useState<"full" | "part">("full");
   const [evidenceNote, setEvidenceNote] = useState("");
   const [evidenceImage, setEvidenceImage] = useState<File | null>(null);
   const [evidenceVoice, setEvidenceVoice] = useState<File | null>(null);
+  const [evidenceVideo, setEvidenceVideo] = useState<File | null>(null);
+  const [voiceRecorderKey, setVoiceRecorderKey] = useState(0);
   const [uploadingEvidence, setUploadingEvidence] = useState(false);
 
   const [paymentAmount, setPaymentAmount] = useState("");
@@ -35,7 +37,6 @@ export default function TransactionDetailPage() {
   const [paymentRemark, setPaymentRemark] = useState("");
   const [payingSubmitting, setPayingSubmitting] = useState(false);
 
-  const [refundAmount, setRefundAmount] = useState("");
   const [refundSubmitting, setRefundSubmitting] = useState(false);
 
   async function load() {
@@ -120,13 +121,11 @@ export default function TransactionDetailPage() {
     }
   }
 
-  async function handleIssueRefund(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleIssueFullRefund() {
     setError("");
     setRefundSubmitting(true);
     try {
-      await api.createRefund(id, { amount: parseFloat(refundAmount) });
-      setRefundAmount("");
+      await api.createRefund(id, {});
       load();
     } catch (err: any) {
       setError(err.message);
@@ -150,14 +149,16 @@ export default function TransactionDetailPage() {
     setUploadingEvidence(true);
     try {
       const form = new FormData();
-      form.append("payment_type", evidenceType);
       if (evidenceNote) form.append("note", evidenceNote);
       if (evidenceImage) form.append("image", evidenceImage);
       if (evidenceVoice) form.append("voice", evidenceVoice);
+      if (evidenceVideo) form.append("video", evidenceVideo);
       await api.uploadEvidence(id, form);
       setEvidenceNote("");
       setEvidenceImage(null);
       setEvidenceVoice(null);
+      setEvidenceVideo(null);
+      setVoiceRecorderKey((k) => k + 1);
       load();
     } catch (err: any) {
       setError(err.message);
@@ -311,24 +312,11 @@ export default function TransactionDetailPage() {
             )}
 
             {Number(transaction.advance) > 0 && myRole === "admin" && (
-              <form onSubmit={handleIssueRefund} className="flex gap-2 flex-wrap items-end pt-3 border-t border-slate-100">
-                <div>
-                  <label className="label">Issue refund</label>
-                  <input
-                    type="number"
-                    step="0.0001"
-                    max={transaction.advance}
-                    value={refundAmount}
-                    onChange={(e) => setRefundAmount(e.target.value)}
-                    placeholder={`Up to ${transaction.advance}`}
-                    required
-                    className="input w-36"
-                  />
-                </div>
-                <button type="submit" disabled={refundSubmitting} className="btn-outline">
-                  {refundSubmitting ? "Issuing..." : "Issue refund"}
+              <div className="pt-3 border-t border-slate-100">
+                <button type="button" onClick={handleIssueFullRefund} disabled={refundSubmitting} className="btn-outline">
+                  {refundSubmitting ? "Issuing..." : `Refund in full (${transaction.advance})`}
                 </button>
-              </form>
+              </div>
             )}
           </div>
         </div>
@@ -339,18 +327,22 @@ export default function TransactionDetailPage() {
             {evidence.length > 0 ? (
               <div className="flex flex-col divide-y divide-slate-100 mb-4">
                 {evidence.map((ev) => (
-                  <div key={ev.id} className="py-2.5 text-sm">
+                  <div key={ev.id} className="py-3 text-sm">
                     <div className="flex justify-between">
                       <strong>{ev.staff_name}</strong>
                       <span className="text-xs text-slate-400">{new Date(ev.created_at).toLocaleString()}</span>
                     </div>
                     {ev.note && <p className="text-slate-500 mt-1">{ev.note}</p>}
-                    <div className="flex gap-3 mt-1.5">
+                    <div className="flex flex-col gap-2 mt-2">
                       {ev.image_url && (
-                        <a href={ev.image_url} target="_blank" rel="noreferrer" className="text-teal-600 font-semibold text-xs">View photo</a>
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={ev.image_url} alt="Payment evidence" className="max-w-xs rounded-lg border border-slate-100" />
                       )}
                       {ev.voice_url && (
-                        <a href={ev.voice_url} target="_blank" rel="noreferrer" className="text-teal-600 font-semibold text-xs">Play voice note</a>
+                        <audio src={ev.voice_url} controls className="max-w-xs h-9" />
+                      )}
+                      {ev.video_url && (
+                        <video src={ev.video_url} controls className="max-w-xs rounded-lg border border-slate-100" />
                       )}
                     </div>
                   </div>
@@ -362,27 +354,21 @@ export default function TransactionDetailPage() {
 
             <form onSubmit={handleUploadEvidence} className="flex flex-col gap-3 pt-3 border-t border-slate-100">
               <div className="flex gap-2 flex-wrap items-end">
-                <div>
-                  <label className="label">Type</label>
-                  <select value={evidenceType} onChange={(e) => setEvidenceType(e.target.value as "full" | "part")} className="input">
-                    <option value="full">Full payment</option>
-                    <option value="part">Part payment</option>
-                  </select>
-                </div>
                 <div className="flex-1 min-w-[160px]">
                   <label className="label">Note</label>
                   <input value={evidenceNote} onChange={(e) => setEvidenceNote(e.target.value)} className="input w-full" />
                 </div>
               </div>
-              <div className="flex gap-3 flex-wrap items-end">
+              <div className="flex gap-4 flex-wrap items-end">
                 <div>
                   <label className="label">Photo</label>
-                  <input type="file" accept="image/*" onChange={(e) => setEvidenceImage(e.target.files?.[0] || null)} className="text-sm" />
+                  <input type="file" accept="image/*" capture="environment" onChange={(e) => setEvidenceImage(e.target.files?.[0] || null)} className="text-sm" />
                 </div>
                 <div>
-                  <label className="label">Voice note</label>
-                  <input type="file" accept="audio/*" onChange={(e) => setEvidenceVoice(e.target.files?.[0] || null)} className="text-sm" />
+                  <label className="label">Video</label>
+                  <input type="file" accept="video/*" capture="environment" onChange={(e) => setEvidenceVideo(e.target.files?.[0] || null)} className="text-sm" />
                 </div>
+                <VoiceRecorder key={voiceRecorderKey} onRecorded={setEvidenceVoice} />
                 <button type="submit" disabled={uploadingEvidence} className="btn">
                   {uploadingEvidence ? "Uploading..." : "Upload"}
                 </button>

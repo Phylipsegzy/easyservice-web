@@ -31,7 +31,7 @@ import {
   Calculator,
 } from "lucide-react";
 
-type NavItem = {
+export type NavItem = {
   href: string;
   label: string;
   key?: string;
@@ -48,7 +48,7 @@ const mobileNavItems: NavItem[] = [
   { href: "/more", label: "More", icon: Grid2x2 },
 ];
 
-const desktopNavItems: NavItem[] = [
+export const desktopNavItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", key: "dashboard", icon: LayoutDashboard },
   { href: "/transactions", label: "Transactions", key: "transactions", icon: ArrowLeftRight },
   { href: "/payment-status", label: "Payment Status", key: "payment_status", icon: DollarSign },
@@ -66,7 +66,7 @@ const desktopNavItems: NavItem[] = [
   { href: "/chad-regions", label: "Chad Regions", key: "chad_regions", icon: MapPin, adminOnly: true },
   { href: "/staff-transfers", label: "Staff Transfers", key: "staff_transfers", icon: Send },
   { href: "/partner-ledger", label: "Partner Ledgers", key: "partner_ledgers", icon: Landmark, adminOnly: true },
-  { href: "/expenses", label: "Expenses / Funding", key: "expenses", icon: Receipt, hiddenForRoles: ["personnel", "personnel2", "cashier"] },
+  { href: "/expenses", label: "Staff Expenses / Funding", key: "expenses", icon: Receipt, hiddenForRoles: ["personnel", "personnel2", "cashier"] },
   { href: "/reports", label: "Reports", key: "reports", icon: BarChart3, hiddenForRoles: ["personnel", "personnel2"] },
   { href: "/staff", label: "Staff", key: "staff", icon: UserCog, adminOnly: true },
 ];

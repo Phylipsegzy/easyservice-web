@@ -78,6 +78,18 @@ export const api = {
 
   logout: () => request("/logout", { method: "POST" }),
 
+  webauthnAvailable: (username: string) =>
+    request(`/webauthn/available?username=${encodeURIComponent(username)}`),
+  webauthnLoginOptions: (username: string) =>
+    request("/webauthn/login/options", { method: "POST", body: JSON.stringify({ username }) }),
+  webauthnLogin: (credential: any) =>
+    request("/webauthn/login", { method: "POST", body: JSON.stringify({ credential }) }),
+  webauthnRegisterOptions: () => request("/webauthn/register/options", { method: "POST" }),
+  webauthnRegister: (credential: any, deviceName?: string) =>
+    request("/webauthn/register", { method: "POST", body: JSON.stringify({ credential, device_name: deviceName }) }),
+  webauthnCredentials: () => request("/webauthn/credentials"),
+  webauthnDeleteCredential: (id: number) => request(`/webauthn/credentials/${id}`, { method: "DELETE" }),
+
   me: () => request("/me"),
 
   // Currencies

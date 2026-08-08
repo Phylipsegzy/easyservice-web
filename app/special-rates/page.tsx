@@ -5,8 +5,10 @@ import { api } from "@/lib/api";
 import AppShell from "@/components/AppShell";
 import SearchInput from "@/components/SearchInput";
 import CustomerPicker, { PickedCustomer } from "@/components/CustomerPicker";
+import { useLanguage } from "@/lib/i18n";
 
 export default function SpecialRatesPage() {
+  const { t } = useLanguage();
   const [rates, setRates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -51,43 +53,43 @@ export default function SpecialRatesPage() {
   }
 
   async function handleDelete(id: number) {
-    if (!confirm("Remove this special rate?")) return;
+    if (!confirm(t("confirm_remove_rate"))) return;
     await api.deleteSpecialRate(id);
     load();
   }
 
   return (
-    <AppShell title="Special Rates" subtitle="Preferential rates for specific customers">
+    <AppShell title={t("special_rates")} subtitle={t("special_rates_subtitle")}>
       <form onSubmit={handleAdd} className="card flex flex-col gap-3 mb-6 max-w-md">
         <div>
-          <label className="label">Customer</label>
+          <label className="label">{t("customer")}</label>
           <CustomerPicker selected={customer} onSelect={setCustomer} onCreateNew={() => {}} />
         </div>
         <div>
-          <label className="label">Name (optional)</label>
-          <input value={rateName} onChange={(e) => setRateName(e.target.value)} placeholder="e.g. VIP rate — above 1M" className="input w-full" />
+          <label className="label">{t("name_optional")}</label>
+          <input value={rateName} onChange={(e) => setRateName(e.target.value)} placeholder={t("rate_name_placeholder")} className="input w-full" />
         </div>
         <div>
-          <label className="label">Special rate</label>
+          <label className="label">{t("special_rate_label")}</label>
           <input type="number" step="0.0001" value={rate} onChange={(e) => setRate(e.target.value)} required className="input w-full" />
         </div>
         <button type="submit" disabled={submitting || !customer} className="btn self-start">
-          {submitting ? "Adding..." : "Add special rate"}
+          {submitting ? t("saving") : t("add_special_rate")}
         </button>
       </form>
 
       {error && <p className="text-red-600 text-sm mb-4">{error}</p>}
-      <SearchInput value={search} onChange={setSearch} placeholder="Search by customer..." />
+      <SearchInput value={search} onChange={setSearch} placeholder={t("search_by_customer")} />
       {loading ? (
-        <p className="text-slate-400 text-sm">Loading...</p>
+        <p className="text-slate-400 text-sm">{t("loading")}</p>
       ) : (
         <div className="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>Customer</th>
-                <th>Name</th>
-                <th>Rate</th>
+                <th>{t("customer")}</th>
+                <th>{t("name")}</th>
+                <th>{t("rate")}</th>
                 <th></th>
               </tr>
             </thead>
@@ -98,12 +100,12 @@ export default function SpecialRatesPage() {
                   <td className="text-slate-500">{r.name || "—"}</td>
                   <td>{r.customer_rate}</td>
                   <td>
-                    <button onClick={() => handleDelete(r.id)} className="btn-danger">Remove</button>
+                    <button onClick={() => handleDelete(r.id)} className="btn-danger">{t("remove")}</button>
                   </td>
                 </tr>
               ))}
               {rates.length === 0 && (
-                <tr><td colSpan={4} className="text-center text-slate-400 py-8">No special rates set.</td></tr>
+                <tr><td colSpan={4} className="text-center text-slate-400 py-8">{t("no_special_rates")}</td></tr>
               )}
             </tbody>
           </table>

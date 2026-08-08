@@ -5,8 +5,10 @@ import Link from "next/link";
 import { api } from "@/lib/api";
 import AppShell from "@/components/AppShell";
 import SearchInput from "@/components/SearchInput";
+import { useLanguage } from "@/lib/i18n";
 
 export default function RefundsPage() {
+  const { t } = useLanguage();
   const [refunds, setRefunds] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -47,30 +49,32 @@ export default function RefundsPage() {
     !search || r.customer_name?.toLowerCase().includes(search.toLowerCase()) || r.tranx_ref?.toLowerCase().includes(search.toLowerCase())
   );
 
+  const statusLabel: Record<string, string> = { "": t("all"), pending: t("pending"), completed: t("completed") };
+
   return (
-    <AppShell title="Refunds" subtitle="Money paid back out to customers">
-      <SearchInput value={search} onChange={setSearch} placeholder="Search by customer or reference..." />
+    <AppShell title={t("refunds")} subtitle={t("refunds_subtitle")}>
+      <SearchInput value={search} onChange={setSearch} placeholder={t("search_customer_ref")} />
       <div className="flex gap-2 mb-6">
         {["", "pending", "completed"].map((s) => (
           <button key={s} onClick={() => handleFilter(s)} className={statusFilter === s ? "btn" : "btn-ghost"}>
-            {s === "" ? "All" : s[0].toUpperCase() + s.slice(1)}
+            {statusLabel[s]}
           </button>
         ))}
       </div>
 
       {error && <p className="text-red-600 text-sm mb-4">{error}</p>}
       {loading ? (
-        <p className="text-slate-400 text-sm">Loading...</p>
+        <p className="text-slate-400 text-sm">{t("loading")}</p>
       ) : (
         <div className="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>Date</th>
-                <th>Transaction</th>
-                <th>Customer</th>
-                <th>Amount</th>
-                <th>Status</th>
+                <th>{t("date")}</th>
+                <th>{t("transaction")}</th>
+                <th>{t("customer")}</th>
+                <th>{t("amount")}</th>
+                <th>{t("status")}</th>
                 <th></th>
               </tr>
             </thead>
@@ -86,13 +90,13 @@ export default function RefundsPage() {
                   <td><span className={`badge badge-${r.payment_status === "completed" ? "completed" : "pending"}`}>{r.payment_status}</span></td>
                   <td>
                     {r.payment_status === "pending" && (
-                      <button onClick={() => handleComplete(r.id)} className="btn-ghost">Mark paid out</button>
+                      <button onClick={() => handleComplete(r.id)} className="btn-ghost">{t("mark_paid_out")}</button>
                     )}
                   </td>
                 </tr>
               ))}
               {visibleRefunds.length === 0 && (
-                <tr><td colSpan={6} className="text-center text-slate-400 py-8">No refunds yet.</td></tr>
+                <tr><td colSpan={6} className="text-center text-slate-400 py-8">{t("no_refunds_yet")}</td></tr>
               )}
             </tbody>
           </table>

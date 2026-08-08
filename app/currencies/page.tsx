@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import AppShell from "@/components/AppShell";
+import { useLanguage } from "@/lib/i18n";
 
 export default function CurrenciesPage() {
+  const { t } = useLanguage();
   const [currencies, setCurrencies] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -63,54 +65,54 @@ export default function CurrenciesPage() {
   }
 
   async function handleDelete(id: number) {
-    if (!confirm("Delete this currency?")) return;
+    if (!confirm(t("confirm_delete_currency"))) return;
     await api.deleteCurrency(id);
     load();
   }
 
   return (
-    <AppShell title="Currencies & Rates" subtitle="Manage exchange rates and sending/receiving status">
+    <AppShell title={t("currencies_title")} subtitle={t("currencies_subtitle")}>
       <form onSubmit={handleAdd} className="card flex gap-3 flex-wrap items-end mb-6">
         <div>
-          <label className="label">Country</label>
+          <label className="label">{t("country_col")}</label>
           <input placeholder="e.g. USA" value={country} onChange={(e) => setCountry(e.target.value)} required className="input" />
         </div>
         <div>
-          <label className="label">Symbol</label>
+          <label className="label">{t("symbol")}</label>
           <input placeholder="$" value={symbol} onChange={(e) => setSymbol(e.target.value)} className="input w-20" />
         </div>
         <div>
-          <label className="label">Code</label>
+          <label className="label">{t("code")}</label>
           <input placeholder="USD" value={currencyCode} onChange={(e) => setCurrencyCode(e.target.value)} className="input w-28" />
         </div>
         <div>
-          <label className="label">Buying rate (to $)</label>
+          <label className="label">{t("buying_rate")}</label>
           <input type="number" step="0.0001" placeholder="1.0000" value={rateToDollar} onChange={(e) => setRateToDollar(e.target.value)} required className="input w-36" />
         </div>
         <div>
-          <label className="label">Selling rate (to $)</label>
-          <input type="number" step="0.0001" placeholder="optional" value={rateToDollarSell} onChange={(e) => setRateToDollarSell(e.target.value)} className="input w-36" />
+          <label className="label">{t("selling_rate")}</label>
+          <input type="number" step="0.0001" placeholder={t("optional")} value={rateToDollarSell} onChange={(e) => setRateToDollarSell(e.target.value)} className="input w-36" />
         </div>
         <button type="submit" disabled={submitting} className="btn">
-          {submitting ? "Adding..." : "Add currency"}
+          {submitting ? t("saving") : t("add_currency")}
         </button>
       </form>
 
       {error && <p className="text-red-600 text-sm mb-4">{error}</p>}
       {loading ? (
-        <p className="text-slate-400 text-sm">Loading...</p>
+        <p className="text-slate-400 text-sm">{t("loading")}</p>
       ) : (
         <div className="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>Country</th>
-                <th>Symbol</th>
-                <th>Code</th>
-                <th>Buy rate</th>
-                <th>Sell rate</th>
-                <th>Sending</th>
-                <th>Receiving</th>
+                <th>{t("country_col")}</th>
+                <th>{t("symbol")}</th>
+                <th>{t("code")}</th>
+                <th>{t("buy_rate")}</th>
+                <th>{t("sell_rate")}</th>
+                <th>{t("sending")}</th>
+                <th>{t("receiving")}</th>
                 <th></th>
               </tr>
             </thead>
@@ -141,21 +143,21 @@ export default function CurrenciesPage() {
                   </td>
                   <td>
                     <button onClick={() => handleToggle(c, "is_sending_active")} className={c.is_sending_active ? "btn-ghost" : "btn-danger"}>
-                      {c.is_sending_active ? "On" : "Off"}
+                      {c.is_sending_active ? t("on") : t("off")}
                     </button>
                   </td>
                   <td>
                     <button onClick={() => handleToggle(c, "is_receiving_active")} className={c.is_receiving_active ? "btn-ghost" : "btn-danger"}>
-                      {c.is_receiving_active ? "On" : "Off"}
+                      {c.is_receiving_active ? t("on") : t("off")}
                     </button>
                   </td>
                   <td>
-                    <button onClick={() => handleDelete(c.id)} className="btn-danger">Delete</button>
+                    <button onClick={() => handleDelete(c.id)} className="btn-danger">{t("delete")}</button>
                   </td>
                 </tr>
               ))}
               {currencies.length === 0 && (
-                <tr><td colSpan={8} className="text-center text-slate-400 py-8">No currencies yet.</td></tr>
+                <tr><td colSpan={8} className="text-center text-slate-400 py-8">{t("no_currencies_yet")}</td></tr>
               )}
             </tbody>
           </table>
