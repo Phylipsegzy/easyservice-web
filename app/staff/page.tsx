@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import AppShell from "@/components/AppShell";
 import SearchInput from "@/components/SearchInput";
+import CountrySearchSelect from "@/components/CountrySearchSelect";
 import { useLanguage } from "@/lib/i18n";
 
 export default function StaffPage() {
@@ -21,7 +22,10 @@ export default function StaffPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [roleId, setRoleId] = useState("");
-  const [location, setLocation] = useState("");
+  const [countryId, setCountryId] = useState("");
+  const [chadRegionId, setChadRegionId] = useState("");
+  const [currencies, setCurrencies] = useState<any[]>([]);
+  const [chadRegions, setChadRegions] = useState<any[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
   const [resetTarget, setResetTarget] = useState<any>(null);
@@ -30,9 +34,16 @@ export default function StaffPage() {
   async function load() {
     setLoading(true);
     try {
-      const [staffRes, rolesRes] = await Promise.all([api.getStaff(), api.getRoles()]);
+      const [staffRes, rolesRes, currenciesRes, chadRegionsRes] = await Promise.all([
+        api.getStaff(),
+        api.getRoles(),
+        api.getCurrencies(),
+        api.getChadRegions(),
+      ]);
       setStaff(staffRes.staff);
       setRoles(rolesRes.roles);
+      setCurrencies(currenciesRes.currencies);
+      setChadRegions(chadRegionsRes.chad_regions);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -51,7 +62,8 @@ export default function StaffPage() {
     setEmail("");
     setPassword("");
     setRoleId("");
-    setLocation("");
+    setCountryId("");
+    setChadRegionId("");
     setCreatingOpen(true);
   }
 
@@ -61,7 +73,9 @@ export default function StaffPage() {
     setUsername(member.username);
     setEmail(member.email || "");
     setRoleId(String(member.role_id));
-    setLocation(member.location || "");
+    const matchedCountry = currencies.find((c) => c.country?.toLowerCase() === member.location?.toLowerCase());
+    setCountryId(matchedCountry ? String(matchedCountry.id) : "");
+    setChadRegionId(member.chad_region || "");
     setCreatingOpen(true);
   }
 
@@ -70,8 +84,12 @@ export default function StaffPage() {
     setError("");
     setSubmitting(true);
     try {
+      const selectedCountry = currencies.find((c) => String(c.id) === countryId);
+      const location = selectedCountry?.country || undefined;
+      const chad_region = location?.toLowerCase() === "chad" ? (chadRegionId || undefined) : undefined;
+
       if (editing) {
-        await api.updateStaff(editing.id, { name, email: email || undefined, role_id: Number(roleId), location: location || undefined });
+        await api.updateStaff(editing.id, { name, email: email || undefined, role_id: Number(roleId), location, chad_region });
       } else {
         await api.createStaff({
           name,
@@ -79,7 +97,8 @@ export default function StaffPage() {
           email: email || undefined,
           password,
           role_id: Number(roleId),
-          location: location || undefined,
+          location,
+          chad_region,
         });
       }
       setCreatingOpen(false);
@@ -147,8 +166,19 @@ export default function StaffPage() {
           </div>
           <div>
             <label className="label">{t("location")}</label>
-            <input value={location} onChange={(e) => setLocation(e.target.value)} className="input w-full" />
+            <CountrySearchSelect currencies={currencies} selectedId={countryId} onSelect={(id) => { setCountryId(id); setChadRegionId(""); }} />
           </div>
+          {currencies.find((c) => String(c.id) === countryId)?.country?.toLowerCase() === "chad" && (
+            <div>
+              <label className="label">Chad region</label>
+              <select value={chadRegionId} onChange={(e) => setChadRegionId(e.target.value)} className="input w-full">
+                <option value="">Select region...</option>
+                {chadRegions.map((r) => (
+                  <option key={r.id} value={r.region}>{r.region}</option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="flex gap-2">
             <button type="submit" disabled={submitting} className="btn">{submitting ? t("saving") : t("save")}</button>
             <button type="button" onClick={() => setCreatingOpen(false)} className="btn-ghost">{t("cancel")}</button>
