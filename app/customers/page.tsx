@@ -5,6 +5,7 @@ import Link from "next/link";
 import { api } from "@/lib/api";
 import AppShell from "@/components/AppShell";
 import PhoneInput from "@/components/PhoneInput";
+import CountrySearchSelect from "@/components/CountrySearchSelect";
 import { useLanguage } from "@/lib/i18n";
 
 export default function CustomersPage() {
@@ -19,7 +20,6 @@ export default function CustomersPage() {
   const [countryCode, setCountryCode] = useState("");
   const [phone, setPhone] = useState("");
   const [countryId, setCountryId] = useState("");
-  const [location, setLocation] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   async function load(searchTerm?: string) {
@@ -49,13 +49,11 @@ export default function CustomersPage() {
         phone,
         country_code: countryCode || undefined,
         country_id: countryId ? Number(countryId) : undefined,
-        location,
       });
       setName("");
       setCountryCode("");
       setPhone("");
       setCountryId("");
-      setLocation("");
       load();
     } catch (err: any) {
       setError(err.message);
@@ -81,17 +79,8 @@ export default function CustomersPage() {
           <PhoneInput countryCode={countryCode} phone={phone} onCountryCodeChange={setCountryCode} onPhoneChange={setPhone} required />
         </div>
         <div>
-          <label className="label">{lang === "ar" ? "بلد الإقامة" : "Home country"}</label>
-          <select value={countryId} onChange={(e) => setCountryId(e.target.value)} className="input">
-            <option value="">{lang === "ar" ? "اختر (يُستخدم كبلد إرسال افتراضي)" : "Select (used as default sending country on invoices)"}</option>
-            {currencies.map((c) => (
-              <option key={c.id} value={c.id}>{c.country}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="label">{lang === "ar" ? "الموقع (نص حر، اختياري)" : "Location (free text, optional)"}</label>
-          <input value={location} onChange={(e) => setLocation(e.target.value)} className="input" />
+          <label className="label">{lang === "ar" ? "البلد" : "Country"}</label>
+          <CountrySearchSelect currencies={currencies} selectedId={countryId} onSelect={setCountryId} />
         </div>
         <button type="submit" disabled={submitting} className="btn">
           {submitting ? (lang === "ar" ? "جارٍ الإضافة..." : "Adding...") : (lang === "ar" ? "إضافة عميل" : "Add customer")}

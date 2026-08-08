@@ -5,8 +5,13 @@ import { api, getToken } from "@/lib/api";
 import { unlockWithBiometric } from "@/lib/webauthn";
 import { Fingerprint, Lock } from "lucide-react";
 
-const GRACE_WINDOW_MS = 60 * 1000; // 1 minute
+const GRACE_WINDOW_MS = 2 * 60 * 1000; // 2 minutes
 const LAST_UNLOCK_KEY = "es_lock_last_unlock";
+
+function isMobileDevice(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent);
+}
 
 export default function AppLock({ children }: { children: React.ReactNode }) {
   const [locked, setLocked] = useState(false);
@@ -27,6 +32,16 @@ export default function AppLock({ children }: { children: React.ReactNode }) {
   }
 
   async function checkLockState() {
+    if (!isMobileDevice()) {
+      // Desktop browsers don't have the same "someone else could pick this up"
+      // threat model a phone does, and tab-switching (or even opening a file
+      // picker, which also fires a visibility change) made this actively
+      // disruptive there rather than protective.
+      setLocked(false);
+      setChecked(true);
+      return;
+    }
+
     if (!getToken()) {
       // Not logged in at all — nothing to lock, login page handles itself.
       setLocked(false);

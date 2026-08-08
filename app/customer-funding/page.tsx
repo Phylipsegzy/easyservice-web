@@ -14,18 +14,20 @@ export default function CustomerFundingPage() {
   const [currencies, setCurrencies] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-  const [lastPaymentId, setLastPaymentId] = useState<number | null>(null);
 
   const [fundCurrencyId, setFundCurrencyId] = useState("");
   const [fundAmount, setFundAmount] = useState("");
   const [fundRemark, setFundRemark] = useState("");
   const [fundSubmitting, setFundSubmitting] = useState(false);
+  const [fundSuccess, setFundSuccess] = useState("");
+  const [fundLastPaymentId, setFundLastPaymentId] = useState<number | null>(null);
 
   const [expCurrencyId, setExpCurrencyId] = useState("");
   const [expAmount, setExpAmount] = useState("");
   const [expRemark, setExpRemark] = useState("");
   const [expSubmitting, setExpSubmitting] = useState(false);
+  const [expSuccess, setExpSuccess] = useState("");
+  const [expLastPaymentId, setExpLastPaymentId] = useState<number | null>(null);
 
   useEffect(() => {
     api.getCurrencies().then((res) => setCurrencies(res.currencies)).catch(() => {});
@@ -52,7 +54,8 @@ export default function CustomerFundingPage() {
       setFundRemark("");
       setExpAmount("");
       setExpRemark("");
-      setSuccess("");
+      setFundSuccess("");
+      setExpSuccess("");
     } else {
       setFullCustomer(null);
     }
@@ -70,8 +73,8 @@ export default function CustomerFundingPage() {
   async function handleFund(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    setSuccess("");
-    setLastPaymentId(null);
+    setFundSuccess("");
+    setFundLastPaymentId(null);
     setFundSubmitting(true);
     try {
       const res = await api.fundCustomerWallet(customer!.id, {
@@ -79,8 +82,8 @@ export default function CustomerFundingPage() {
         amount: parseFloat(fundAmount),
         remark: fundRemark || undefined,
       });
-      setSuccess(`Wallet funded for ${customer!.customer_name}.`);
-      setLastPaymentId(res.payment.id);
+      setFundSuccess(`Wallet funded for ${customer!.customer_name}.`);
+      setFundLastPaymentId(res.payment.id);
       setFundAmount("");
       setFundRemark("");
       loadFullCustomer(customer!.id);
@@ -94,8 +97,8 @@ export default function CustomerFundingPage() {
   async function handleExpense(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    setSuccess("");
-    setLastPaymentId(null);
+    setExpSuccess("");
+    setExpLastPaymentId(null);
     setExpSubmitting(true);
     try {
       const res = await api.expenseCustomerWallet(customer!.id, {
@@ -103,8 +106,8 @@ export default function CustomerFundingPage() {
         amount: parseFloat(expAmount),
         remark: expRemark || undefined,
       });
-      setSuccess(`Expense charged to ${customer!.customer_name}.`);
-      setLastPaymentId(res.payment.id);
+      setExpSuccess(`Expense charged to ${customer!.customer_name}.`);
+      setExpLastPaymentId(res.payment.id);
       setExpAmount("");
       setExpRemark("");
       loadFullCustomer(customer!.id);
@@ -129,16 +132,6 @@ export default function CustomerFundingPage() {
       </div>
 
       {error && <p className="text-red-600 text-sm mb-4">{error}</p>}
-      {success && (
-        <div className="flex items-center gap-3 mb-4">
-          <p className="text-emerald-600 text-sm">{success}</p>
-          {lastPaymentId && (
-            <Link href={`/payments/${lastPaymentId}/receipt`} className="btn-ghost no-underline">
-              Print receipt
-            </Link>
-          )}
-        </div>
-      )}
 
       {loading && <p className="text-slate-400 text-sm">Loading customer...</p>}
 
@@ -195,6 +188,16 @@ export default function CustomerFundingPage() {
                 <button type="submit" disabled={fundSubmitting} className="btn self-start">
                   {fundSubmitting ? "Saving..." : "Fund wallet"}
                 </button>
+                {fundSuccess && (
+                  <div className="flex items-center gap-3 pt-1">
+                    <p className="text-emerald-600 text-sm">{fundSuccess}</p>
+                    {fundLastPaymentId && (
+                      <Link href={`/payments/${fundLastPaymentId}/receipt`} className="btn-ghost no-underline text-sm">
+                        Print receipt
+                      </Link>
+                    )}
+                  </div>
+                )}
               </form>
             </div>
 
@@ -225,6 +228,16 @@ export default function CustomerFundingPage() {
                 <button type="submit" disabled={expSubmitting} className="btn-outline self-start">
                   {expSubmitting ? "Saving..." : "Charge expense"}
                 </button>
+                {expSuccess && (
+                  <div className="flex items-center gap-3 pt-1">
+                    <p className="text-emerald-600 text-sm">{expSuccess}</p>
+                    {expLastPaymentId && (
+                      <Link href={`/payments/${expLastPaymentId}/receipt`} className="btn-ghost no-underline text-sm">
+                        Print receipt
+                      </Link>
+                    )}
+                  </div>
+                )}
               </form>
             </div>
           </div>

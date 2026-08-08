@@ -243,7 +243,8 @@ export default function AccountPage() {
               Once enabled, returning to EasyService on this device after a short while away will
               ask for Face ID, Touch ID, or your fingerprint before showing anything — with your
               password as a fallback if that ever fails. This only applies to this specific device —
-              enable it separately on any other device you use.
+              enable it separately on any other device you use. The lock itself only activates on
+              phones/tablets, not desktop browsers.
             </p>
             <button onClick={handleEnableBiometric} disabled={biometricBusy} className="btn flex items-center gap-1.5 mb-3">
               <Fingerprint size={15} /> {biometricBusy ? "..." : "Enable on this device"}

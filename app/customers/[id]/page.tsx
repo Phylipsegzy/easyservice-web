@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { api } from "@/lib/api";
 import AppShell from "@/components/AppShell";
 import MoneyInput from "@/components/MoneyInput";
+import CountrySearchSelect from "@/components/CountrySearchSelect";
 import { Download } from "lucide-react";
 
 export default function CustomerDetailPage() {
@@ -38,7 +39,6 @@ export default function CustomerDetailPage() {
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState("");
   const [editPhone, setEditPhone] = useState("");
-  const [editLocation, setEditLocation] = useState("");
   const [editEmail, setEditEmail] = useState("");
   const [editAddress, setEditAddress] = useState("");
   const [editCountryId, setEditCountryId] = useState("");
@@ -72,7 +72,6 @@ export default function CustomerDetailPage() {
   function openEdit() {
     setEditName(customer.customer_name || "");
     setEditPhone(customer.phone || "");
-    setEditLocation(customer.location || "");
     setEditEmail(customer.email || "");
     setEditAddress(customer.address || "");
     setEditCountryId(customer.country_id ? String(customer.country_id) : "");
@@ -88,7 +87,6 @@ export default function CustomerDetailPage() {
       await api.updateCustomer(customerId, {
         customer_name: editName,
         phone: editPhone,
-        location: editLocation || undefined,
         email: editEmail || undefined,
         address: editAddress || undefined,
         country_id: editCountryId ? Number(editCountryId) : undefined,
@@ -229,17 +227,8 @@ export default function CustomerDetailPage() {
                 <input value={editPhone} onChange={(e) => setEditPhone(e.target.value)} required className="input w-full" />
               </div>
               <div>
-                <label className="label">Location</label>
-                <input value={editLocation} onChange={(e) => setEditLocation(e.target.value)} className="input w-full" placeholder="e.g. Chad" />
-              </div>
-              <div>
                 <label className="label">Country</label>
-                <select value={editCountryId} onChange={(e) => setEditCountryId(e.target.value)} className="input w-full">
-                  <option value="">Not set</option>
-                  {currencies.map((c) => (
-                    <option key={c.id} value={c.id}>{c.country}</option>
-                  ))}
-                </select>
+                <CountrySearchSelect currencies={currencies} selectedId={editCountryId} onSelect={setEditCountryId} />
               </div>
               <div>
                 <label className="label">Email</label>
