@@ -17,6 +17,7 @@ export default function TransactionDetailPage() {
   const [evidence, setEvidence] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [evidenceError, setEvidenceError] = useState("");
   const [completing, setCompleting] = useState(false);
 
   const [evidenceNote, setEvidenceNote] = useState("");
@@ -145,7 +146,7 @@ export default function TransactionDetailPage() {
 
   async function handleUploadEvidence(e: React.FormEvent) {
     e.preventDefault();
-    setError("");
+    setEvidenceError("");
     setUploadingEvidence(true);
     try {
       const form = new FormData();
@@ -161,7 +162,7 @@ export default function TransactionDetailPage() {
       setVoiceRecorderKey((k) => k + 1);
       load();
     } catch (err: any) {
-      setError(err.message);
+      setEvidenceError(err.message);
     } finally {
       setUploadingEvidence(false);
     }
@@ -352,6 +353,8 @@ export default function TransactionDetailPage() {
               <p className="text-slate-400 text-sm mb-4">No evidence uploaded yet.</p>
             )}
 
+            {evidenceError && <p className="text-red-600 text-sm pt-3">{evidenceError}</p>}
+
             <form onSubmit={handleUploadEvidence} className="flex flex-col gap-3 pt-3 border-t border-slate-100">
               <div className="flex gap-2 flex-wrap items-end">
                 <div className="flex-1 min-w-[160px]">
@@ -359,20 +362,50 @@ export default function TransactionDetailPage() {
                   <input value={evidenceNote} onChange={(e) => setEvidenceNote(e.target.value)} className="input w-full" />
                 </div>
               </div>
-              <div className="flex gap-4 flex-wrap items-end">
-                <div>
-                  <label className="label">Photo</label>
-                  <input type="file" accept="image/*" capture="environment" onChange={(e) => setEvidenceImage(e.target.files?.[0] || null)} className="text-sm" />
+
+              <div>
+                <label className="label">Photo</label>
+                <div className="flex gap-2 flex-wrap">
+                  <label className="btn-ghost cursor-pointer text-sm">
+                    Take photo
+                    <input type="file" accept="image/*" capture="environment" onChange={(e) => setEvidenceImage(e.target.files?.[0] || null)} className="hidden" />
+                  </label>
+                  <label className="btn-ghost cursor-pointer text-sm">
+                    Choose from gallery
+                    <input type="file" accept="image/*" onChange={(e) => setEvidenceImage(e.target.files?.[0] || null)} className="hidden" />
+                  </label>
+                  {evidenceImage && (
+                    <span className="text-xs text-teal-700 self-center">
+                      ✓ {evidenceImage.name} ({Math.round(evidenceImage.size / 1024)} KB)
+                    </span>
+                  )}
                 </div>
-                <div>
-                  <label className="label">Video</label>
-                  <input type="file" accept="video/*" capture="environment" onChange={(e) => setEvidenceVideo(e.target.files?.[0] || null)} className="text-sm" />
-                </div>
-                <VoiceRecorder key={voiceRecorderKey} onRecorded={setEvidenceVoice} />
-                <button type="submit" disabled={uploadingEvidence} className="btn">
-                  {uploadingEvidence ? "Uploading..." : "Upload"}
-                </button>
               </div>
+
+              <div>
+                <label className="label">Video</label>
+                <div className="flex gap-2 flex-wrap">
+                  <label className="btn-ghost cursor-pointer text-sm">
+                    Record video
+                    <input type="file" accept="video/*" capture="environment" onChange={(e) => setEvidenceVideo(e.target.files?.[0] || null)} className="hidden" />
+                  </label>
+                  <label className="btn-ghost cursor-pointer text-sm">
+                    Choose from gallery
+                    <input type="file" accept="video/*" onChange={(e) => setEvidenceVideo(e.target.files?.[0] || null)} className="hidden" />
+                  </label>
+                  {evidenceVideo && (
+                    <span className="text-xs text-teal-700 self-center">
+                      ✓ {evidenceVideo.name} ({Math.round(evidenceVideo.size / 1024)} KB)
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <VoiceRecorder key={voiceRecorderKey} onRecorded={setEvidenceVoice} />
+
+              <button type="submit" disabled={uploadingEvidence} className="btn self-start">
+                {uploadingEvidence ? "Uploading..." : "Upload"}
+              </button>
             </form>
           </div>
         </div>

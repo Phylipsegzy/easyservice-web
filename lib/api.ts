@@ -42,7 +42,16 @@ async function request<T = any>(
     },
   });
 
-  const data = await res.json();
+  let data;
+  try {
+    data = await res.json();
+  } catch {
+    throw new Error(
+      res.status === 413
+        ? "That file is too large for the server to accept. Try a smaller photo/video."
+        : `Server error (${res.status}) — try again, or try a smaller file if you were uploading something.`
+    );
+  }
 
   if (!res.ok) {
     // Any authenticated request failing with 401 means there's no valid
@@ -340,7 +349,16 @@ export const api = {
       headers: { Accept: "application/json", "ngrok-skip-browser-warning": "true", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       body: form,
     });
-    const data = await res.json();
+    let data;
+    try {
+      data = await res.json();
+    } catch {
+      throw new Error(
+        res.status === 413
+          ? "That file is too large for the server to accept. Try a smaller photo/video."
+          : `Upload failed (server error ${res.status}) — the file may be too large, or try again.`
+      );
+    }
     if (!res.ok) throw new Error(data.message || "Upload failed");
     return data;
   },

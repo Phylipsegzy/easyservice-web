@@ -35,6 +35,16 @@ export default function CustomerDetailPage() {
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
   const [reversingId, setReversingId] = useState<number | null>(null);
 
+  const [editing, setEditing] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editLocation, setEditLocation] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editAddress, setEditAddress] = useState("");
+  const [editCountryId, setEditCountryId] = useState("");
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editError, setEditError] = useState("");
+
   async function load() {
     setLoading(true);
     try {
@@ -58,6 +68,39 @@ export default function CustomerDetailPage() {
     load();
     api.me().then((res) => setMyRole(res.user.role)).catch(() => {});
   }, [customerId]);
+
+  function openEdit() {
+    setEditName(customer.customer_name || "");
+    setEditPhone(customer.phone || "");
+    setEditLocation(customer.location || "");
+    setEditEmail(customer.email || "");
+    setEditAddress(customer.address || "");
+    setEditCountryId(customer.country_id ? String(customer.country_id) : "");
+    setEditError("");
+    setEditing(true);
+  }
+
+  async function handleEditSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setEditError("");
+    setEditSubmitting(true);
+    try {
+      await api.updateCustomer(customerId, {
+        customer_name: editName,
+        phone: editPhone,
+        location: editLocation || undefined,
+        email: editEmail || undefined,
+        address: editAddress || undefined,
+        country_id: editCountryId ? Number(editCountryId) : undefined,
+      });
+      setEditing(false);
+      load();
+    } catch (err: any) {
+      setEditError(err.message);
+    } finally {
+      setEditSubmitting(false);
+    }
+  }
 
   // If the customer has exactly one wallet, use it automatically for
   // fund/expense — no need to make staff pick a currency every time.
@@ -166,10 +209,54 @@ export default function CustomerDetailPage() {
     <AppShell title={customer.customer_name} subtitle={customer.phone}>
       <a href="/customers" className="back-link">&larr; Customers</a>
 
-      <div className="card mb-6 grid grid-cols-3 gap-4 text-sm">
-        <div><div className="stat-label">Phone</div><div className="font-medium mt-1">{customer.phone}</div></div>
-        <div><div className="stat-label">Location</div><div className="font-medium mt-1">{customer.location || "—"}</div></div>
-        <div><div className="stat-label">Status</div><span className={`badge badge-${customer.status} mt-1`}>{customer.status}</span></div>
+      <div className="card mb-6">
+        <div className="grid grid-cols-3 gap-4 text-sm mb-3">
+          <div><div className="stat-label">Phone</div><div className="font-medium mt-1">{customer.phone}</div></div>
+          <div><div className="stat-label">Location</div><div className="font-medium mt-1">{customer.location || "—"}</div></div>
+          <div><div className="stat-label">Status</div><span className={`badge badge-${customer.status} mt-1`}>{customer.status}</span></div>
+        </div>
+        {!editing ? (
+          <button onClick={openEdit} className="btn-ghost">Edit details</button>
+        ) : (
+          <form onSubmit={handleEditSubmit} className="flex flex-col gap-3 pt-3 border-t border-slate-100">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="label">Name</label>
+                <input value={editName} onChange={(e) => setEditName(e.target.value)} required className="input w-full" />
+              </div>
+              <div>
+                <label className="label">Phone</label>
+                <input value={editPhone} onChange={(e) => setEditPhone(e.target.value)} required className="input w-full" />
+              </div>
+              <div>
+                <label className="label">Location</label>
+                <input value={editLocation} onChange={(e) => setEditLocation(e.target.value)} className="input w-full" placeholder="e.g. Chad" />
+              </div>
+              <div>
+                <label className="label">Country</label>
+                <select value={editCountryId} onChange={(e) => setEditCountryId(e.target.value)} className="input w-full">
+                  <option value="">Not set</option>
+                  {currencies.map((c) => (
+                    <option key={c.id} value={c.id}>{c.country}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="label">Email</label>
+                <input type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} className="input w-full" />
+              </div>
+              <div>
+                <label className="label">Address</label>
+                <input value={editAddress} onChange={(e) => setEditAddress(e.target.value)} className="input w-full" />
+              </div>
+            </div>
+            {editError && <p className="text-red-600 text-sm">{editError}</p>}
+            <div className="flex gap-2">
+              <button type="submit" disabled={editSubmitting} className="btn">{editSubmitting ? "Saving..." : "Save"}</button>
+              <button type="button" onClick={() => setEditing(false)} className="btn-ghost">Cancel</button>
+            </div>
+          </form>
+        )}
       </div>
 
       <h2 className="text-base font-semibold mb-2">Wallets</h2>

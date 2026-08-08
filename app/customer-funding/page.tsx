@@ -15,6 +15,7 @@ export default function CustomerFundingPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [lastPaymentId, setLastPaymentId] = useState<number | null>(null);
 
   const [fundCurrencyId, setFundCurrencyId] = useState("");
   const [fundAmount, setFundAmount] = useState("");
@@ -70,14 +71,16 @@ export default function CustomerFundingPage() {
     e.preventDefault();
     setError("");
     setSuccess("");
+    setLastPaymentId(null);
     setFundSubmitting(true);
     try {
-      await api.fundCustomerWallet(customer!.id, {
+      const res = await api.fundCustomerWallet(customer!.id, {
         currency_id: Number(fundCurrencyId),
         amount: parseFloat(fundAmount),
         remark: fundRemark || undefined,
       });
       setSuccess(`Wallet funded for ${customer!.customer_name}.`);
+      setLastPaymentId(res.payment.id);
       setFundAmount("");
       setFundRemark("");
       loadFullCustomer(customer!.id);
@@ -92,14 +95,16 @@ export default function CustomerFundingPage() {
     e.preventDefault();
     setError("");
     setSuccess("");
+    setLastPaymentId(null);
     setExpSubmitting(true);
     try {
-      await api.expenseCustomerWallet(customer!.id, {
+      const res = await api.expenseCustomerWallet(customer!.id, {
         currency_id: Number(expCurrencyId),
         amount: parseFloat(expAmount),
         remark: expRemark || undefined,
       });
       setSuccess(`Expense charged to ${customer!.customer_name}.`);
+      setLastPaymentId(res.payment.id);
       setExpAmount("");
       setExpRemark("");
       loadFullCustomer(customer!.id);
@@ -124,7 +129,16 @@ export default function CustomerFundingPage() {
       </div>
 
       {error && <p className="text-red-600 text-sm mb-4">{error}</p>}
-      {success && <p className="text-emerald-600 text-sm mb-4">{success}</p>}
+      {success && (
+        <div className="flex items-center gap-3 mb-4">
+          <p className="text-emerald-600 text-sm">{success}</p>
+          {lastPaymentId && (
+            <Link href={`/payments/${lastPaymentId}/receipt`} className="btn-ghost no-underline">
+              Print receipt
+            </Link>
+          )}
+        </div>
+      )}
 
       {loading && <p className="text-slate-400 text-sm">Loading customer...</p>}
 

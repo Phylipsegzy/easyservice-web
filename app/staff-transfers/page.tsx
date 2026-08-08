@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import AppShell from "@/components/AppShell";
 import SearchInput from "@/components/SearchInput";
+import MoneyInput from "@/components/MoneyInput";
 
 export default function StaffTransfersPage() {
   const [transfers, setTransfers] = useState<any[]>([]);
@@ -24,8 +25,8 @@ export default function StaffTransfersPage() {
 
   const canActForOthers = me?.role === "admin" || me?.role === "manager";
 
-  async function load() {
-    setLoading(true);
+  async function load(silent = false) {
+    if (!silent) setLoading(true);
     try {
       const [transfersRes, pendingRes, staffRes, currenciesRes, meRes] = await Promise.all([
         api.getStaffTransfers(),
@@ -45,14 +46,19 @@ export default function StaffTransfersPage() {
         setAllStaff(fullStaffRes.staff);
       }
     } catch (err: any) {
-      setError(err.message);
+      if (!silent) setError(err.message);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }
 
   useEffect(() => {
     load();
+    // Auto-refresh — balances and pending approvals can change from someone
+    // else's action at any time, so a quiet periodic refresh keeps this
+    // current without needing a manual reload.
+    const interval = setInterval(() => load(true), 15000);
+    return () => clearInterval(interval);
   }, []);
 
   // Currency is derived from whoever is actually sending — either me, or the
@@ -176,9 +182,17 @@ export default function StaffTransfersPage() {
             {myCurrency ? `${myCurrency.currency_code} (${effectiveSender?.location || "unknown"})` : "Unknown — set location first"}
           </div>
         </div>
+        {effectiveSender && (
+          <div>
+            <label className="label">Current balance</label>
+            <div className="input flex items-center bg-slate-50 text-teal-700 font-semibold">
+              {myCurrency?.symbol || ""} {Number(effectiveSender.wallet || 0).toLocaleString()}
+            </div>
+          </div>
+        )}
         <div>
           <label className="label">Amount</label>
-          <input type="number" step="0.0001" value={amount} onChange={(e) => setAmount(e.target.value)} required className="input w-36" />
+          <MoneyInput value={amount} onChange={setAmount} className="input w-36" required />
         </div>
         <div>
           <label className="label">Notes</label>
@@ -221,7 +235,7 @@ export default function StaffTransfersPage() {
                 <tr key={t.id}>
                   <td>{t.sender_name}</td>
                   <td>{t.receiver_name}</td>
-                  <td className="font-medium">{t.currency_symbol}{t.amount}</td>
+                  <td className="font-medium">{t.currency_symbol}{Number(t.amount).toLocaleString()}</td>
                   <td>
                     <span className={`badge badge-${badgeClass(t.status)}`}>{t.status}</span>
                   </td>

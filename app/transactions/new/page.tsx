@@ -59,8 +59,6 @@ export default function NewTransactionPage() {
   const [receiveAmount, setReceiveAmount] = useState("");
   const [lastEdited, setLastEdited] = useState<"send" | "receive">("send");
 
-  const [advance, setAdvance] = useState("");
-  const [location, setLocation] = useState("");
   const [notes, setNotes] = useState("");
   const [chadRegions, setChadRegions] = useState<any[]>([]);
   const [chadRegion, setChadRegion] = useState("");
@@ -228,8 +226,6 @@ export default function NewTransactionPage() {
         country1_id: Number(sendingCountryId),
         country2_id: Number(receivingCountryId),
         rate: parseFloat(rate),
-        advance: advance ? parseFloat(advance) : undefined,
-        location: location || undefined,
         notes: notes || undefined,
         chad_region: isChadDestination ? chadRegion : undefined,
         owner_id: isAdmin && ownerId ? Number(ownerId) : undefined,
@@ -256,8 +252,6 @@ export default function NewTransactionPage() {
     setRate("");
     setSendAmount("");
     setReceiveAmount("");
-    setAdvance("");
-    setLocation("");
     setNotes("");
     setError("");
   }
@@ -516,15 +510,6 @@ export default function NewTransactionPage() {
                 className="input w-full text-2xl font-bold py-4"
               />
             </div>
-            <div>
-              <label className="label">{lang === "ar" ? "الدفعة المقدمة المستلمة" : "Advance received"}</label>
-              <MoneyInput
-                value={advance}
-                onChange={setAdvance}
-                placeholder="defaults to full amount"
-                className="input w-full"
-              />
-            </div>
           </div>
         )}
 
@@ -556,7 +541,6 @@ export default function NewTransactionPage() {
                 ...(isChadDestination ? [[lang === "ar" ? "منطقة الاستلام" : "Pickup region", chadRegion || "—"]] : []),
                 [t("customer_pays"), `${sendAmount} ${sendingCountry?.currency_code || ""}`],
                 [t("recipient_gets"), `${receiveAmount} ${receivingCountry?.currency_code || ""}`],
-                [lang === "ar" ? "الدفعة المقدمة المستلمة" : "Advance received", advance || (lang === "ar" ? "المبلغ كاملاً" : "Full amount")],
               ].map(([label, value]) => (
                 <div key={label} className="flex justify-between px-4 py-2.5 text-sm">
                   <span className="text-slate-500">{label}</span>
@@ -565,10 +549,6 @@ export default function NewTransactionPage() {
               ))}
             </div>
 
-            <div>
-              <label className="label">{lang === "ar" ? "الموقع" : "Location"}</label>
-              <input value={location} onChange={(e) => setLocation(e.target.value)} className="input w-full" />
-            </div>
             <div>
               <label className="label">{lang === "ar" ? "ملاحظة" : "Note"}</label>
               <textarea
