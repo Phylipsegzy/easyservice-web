@@ -6,7 +6,7 @@ type ApiResponse<T = any> = {
   [key: string]: any;
 } & T;
 
-function getToken(): string | null {
+export function getToken(): string | null {
   if (typeof window === "undefined") return null;
   return localStorage.getItem("easyservice_token");
 }
@@ -309,6 +309,8 @@ export const api = {
     request(`/staff/${id}/reset-password`, { method: "POST", body: JSON.stringify({ password }) }),
   changeOwnPassword: (current_password: string, password: string) =>
     request("/change-password", { method: "POST", body: JSON.stringify({ current_password, password }) }),
+  verifyPassword: (password: string) =>
+    request("/verify-password", { method: "POST", body: JSON.stringify({ password }) }),
   changeLanguage: (language: "en" | "ar") =>
     request("/change-language", { method: "POST", body: JSON.stringify({ language }) }),
   registerPushSubscription: (subscription: any) =>

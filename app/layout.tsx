@@ -1,6 +1,7 @@
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import { LanguageProvider } from "@/lib/i18n";
+import AppLock from "@/components/AppLock";
 
 export const metadata: Metadata = {
   title: "EasyService",
@@ -23,7 +24,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning>
       <body suppressHydrationWarning>
-        <LanguageProvider>{children}</LanguageProvider>
+        <LanguageProvider>
+          <AppLock>{children}</AppLock>
+        </LanguageProvider>
       </body>
     </html>
   );

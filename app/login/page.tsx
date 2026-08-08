@@ -1,11 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, setToken } from "@/lib/api";
 import { useLanguage } from "@/lib/i18n";
-import { isPlatformAuthenticatorAvailable, getCredential } from "@/lib/webauthn";
-import { Fingerprint } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -14,28 +12,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [biometricAvailable, setBiometricAvailable] = useState(false);
-  const [biometricLoading, setBiometricLoading] = useState(false);
-  const [platformSupported, setPlatformSupported] = useState(false);
-
-  useEffect(() => {
-    isPlatformAuthenticatorAvailable().then(setPlatformSupported);
-  }, []);
-
-  // Debounced check — once someone's typed a plausible username, ask the
-  // server (harmlessly, no auth needed) whether THIS device has biometric
-  // login enabled for THAT account. Empty result for an unknown username is
-  // deliberate — never reveals whether an account exists.
-  useEffect(() => {
-    if (!platformSupported || username.trim().length < 2) {
-      setBiometricAvailable(false);
-      return;
-    }
-    const timer = setTimeout(() => {
-      api.webauthnAvailable(username.trim()).then((res) => setBiometricAvailable(res.available)).catch(() => setBiometricAvailable(false));
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [username, platformSupported]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -51,29 +27,6 @@ export default function LoginPage() {
       setError(err.message || t("login_failed"));
     } finally {
       setLoading(false);
-    }
-  }
-
-  async function handleBiometricLogin() {
-    setError("");
-    setBiometricLoading(true);
-    try {
-      const optionsRes = await api.webauthnLoginOptions(username.trim());
-      const credential = await getCredential(optionsRes.options);
-      const res = await api.webauthnLogin(credential);
-      setToken(res.token);
-      localStorage.setItem("easyservice_user", JSON.stringify(res.user));
-      router.push("/dashboard");
-    } catch (err: any) {
-      // A cancelled/failed biometric prompt shouldn't look like a scary error —
-      // they can just try again or use their password instead.
-      if (err?.name === "NotAllowedError") {
-        setError("");
-      } else {
-        setError(err.message || "Biometric sign-in failed — try your password instead.");
-      }
-    } finally {
-      setBiometricLoading(false);
     }
   }
 
@@ -124,17 +77,6 @@ export default function LoginPage() {
           <button type="submit" disabled={loading} className="btn w-full mt-1 py-3">
             {loading ? t("logging_in") : t("log_in")}
           </button>
-          {biometricAvailable && (
-            <button
-              type="button"
-              onClick={handleBiometricLogin}
-              disabled={biometricLoading}
-              className="btn-outline w-full flex items-center justify-center gap-2 py-3"
-            >
-              <Fingerprint size={18} />
-              {biometricLoading ? "..." : "Sign in with Face ID / Fingerprint"}
-            </button>
-          )}
         </form>
         <p className="text-center text-sm text-slate-400 mt-4">
           {t("tracking_transfer")} <a href="/track" className="text-teal-600 font-semibold no-underline">{t("check_status")}</a>

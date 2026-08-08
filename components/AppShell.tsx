@@ -113,6 +113,7 @@ export default function AppShell({
 
   function handleLogout() {
     clearToken();
+    localStorage.removeItem("es_lock_last_unlock");
     router.push("/login");
   }
 

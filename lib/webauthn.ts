@@ -54,26 +54,30 @@ export async function createCredential(options: any): Promise<any> {
   };
 }
 
-// Login — "verify with biometric"
-export async function getCredential(options: any): Promise<any> {
-  const publicKey: CredentialRequestOptions["publicKey"] = {
-    ...options,
-    challenge: base64urlToBuffer(options.challenge),
-    allowCredentials: (options.allowCredentials || []).map((c: any) => ({
-      ...c,
-      id: base64urlToBuffer(c.id),
-    })),
-  };
+// App-lock unlock — the person is already logged in with a valid session;
+// this just needs the OS to confirm "yes, that's them" via Face ID/fingerprint
+// against an already-registered credential. Deliberately doesn't round-trip
+// to the server for a challenge (unlike real login/registration above) since
+// no new access or trust decision is being granted here, only re-confirming
+// presence to reveal already-authorized content. If it throws, the caller
+// should fall back to the password check.
+export async function unlockWithBiometric(credentialIds: string[]): Promise<boolean> {
+  if (!isWebAuthnSupported() || credentialIds.length === 0) return false;
 
-  const credential = (await navigator.credentials.get({ publicKey })) as PublicKeyCredential;
-  const response = credential.response as AuthenticatorAssertionResponse;
+  const challenge = new Uint8Array(32);
+  crypto.getRandomValues(challenge);
 
-  return {
-    id: bufferToBase64url(credential.rawId),
-    response: {
-      clientDataJSON: bufferToBase64url(response.clientDataJSON),
-      authenticatorData: bufferToBase64url(response.authenticatorData),
-      signature: bufferToBase64url(response.signature),
-    },
-  };
+  try {
+    const credential = await navigator.credentials.get({
+      publicKey: {
+        challenge: challenge.buffer,
+        allowCredentials: credentialIds.map((id) => ({ type: "public-key", id: base64urlToBuffer(id) })),
+        userVerification: "required",
+        timeout: 60000,
+      },
+    });
+    return !!credential;
+  } catch {
+    return false;
+  }
 }
